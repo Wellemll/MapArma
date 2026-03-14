@@ -24,36 +24,44 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // 1. Configuration de la carte pour une IMAGE (pas une carte réelle)
-        const map = L.map('map', {
-            crs: L.CRS.Simple, // Utilise des coordonnées X,Y simples au lieu de Lat/Lon
-            minZoom: -2
+  const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2 });
+const mapImageUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Altis_map_Arma_3.png/800px-Altis_map_Arma_3.png';
+const imageBounds = [[0, 0], [1000, 1000]];
+L.imageOverlay(mapImageUrl, imageBounds).addTo(map);
+map.fitBounds(imageBounds);
+
+// --- FONCTION : Charger les points depuis Cloudflare ---
+async function loadPings() {
+    const response = await fetch('/pings');
+    const pings = await response.json();
+    
+    // On nettoie les anciens marqueurs et on affiche les nouveaux
+    pings.forEach(p => {
+        L.marker([p.x, p.y]).addTo(map)
+         .bindPopup(`<b>${p.label}</b><br>Posté le: ${p.timestamp}`);
+    });
+}
+
+// --- INTERACTION : Envoyer un point au clic ---
+map.on('click', async function(e) {
+    const { lat, lng } = e.latlng;
+    const label = prompt("Nom du point (ex: Ennemi, Loot, Base) :");
+    
+    if (label) {
+        await fetch('/pings', {
+            method: 'POST',
+            body: JSON.stringify({ x: lat, y: lng, label: label }),
+            headers: { 'Content-Type': 'application/json' }
         });
+        loadPings(); // Rafraîchir la carte après l'envoi
+    }
+});
 
-        // 2. Ta carte Arma 3 (Remplace l'URL par l'image de ta map)
-        const mapImageUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Altis_map_Arma_3.png/800px-Altis_map_Arma_3.png';
-        const imageBounds = [[0, 0], [1000, 1000]]; // Taille virtuelle de la map
+// Charger les points au démarrage
+loadPings();
 
-        L.imageOverlay(mapImageUrl, imageBounds).addTo(map);
-        map.fitBounds(imageBounds);
-
-        // 3. Fonction pour ajouter un Ping
-        function createPing(x, y, label) {
-            const marker = L.marker([x, y]).addTo(map);
-            marker.bindPopup(`<b>${label}</b><br>Coord: ${x.toFixed(0)}, ${y.toFixed(0)}`).openPopup();
-        }
-
-        // 4. Interaction : Clic pour poser un point
-        map.on('click', function(e) {
-            const { lat, lng } = e.latlng;
-            
-            // Ici, normalement, tu envoies ces données à Cloudflare D1 / Worker
-            console.log("Envoi au serveur : ", { x: lat, y: lng });
-            
-            // Affichage local immédiat
-            createPing(lat, lng, "Nouveau Point");
-        });
-
+// Optionnel : Rafraîchir automatiquement toutes les 10 secondes
+setInterval(loadPings, 10000);
     </script>
 </body>
 </html>
