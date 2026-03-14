@@ -3,70 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TACTICAL HQ | Arma3</title>
+    <title>TACTICAL HQ | ti-witech</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --primary: #00ff41;
-            --primary-dim: rgba(0, 255, 65, 0.2);
+            --primary-dim: rgba(0, 255, 65, 0.15);
             --danger: #ff3e3e;
             --bg-dark: #080a0c;
-            --sidebar-bg: rgba(13, 17, 23, 0.95);
+            --sidebar-bg: rgba(13, 17, 23, 0.98);
             --accent: #1f2937;
         }
 
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg-dark); font-family: 'Roboto Mono', monospace; color: #e0e0e0; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg-dark); font-family: 'Roboto Mono', monospace; color: #e0e0e0; overflow: hidden; }
 
-        /* Interface Layout */
-        #app-container { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+        #app-container { display: flex; height: 100vh; width: 100vw; }
         
-        #map { flex-grow: 1; background: #050505; cursor: crosshair; }
+        /* La carte */
+        #map { flex-grow: 1; background: #000; cursor: crosshair; }
 
         /* Sidebar Professionnelle */
         #sidebar {
-            width: 300px; background: var(--sidebar-bg); border-right: 1px solid var(--primary-dim);
-            display: flex; flex-direction: column; padding: 20px; box-shadow: 10px 0 30px rgba(0,0,0,0.5); z-index: 1001;
+            width: 280px; background: var(--sidebar-bg); border-right: 1px solid var(--primary-dim);
+            display: flex; flex-direction: column; padding: 25px; box-shadow: 10px 0 30px rgba(0,0,0,0.5); z-index: 1001;
         }
 
-        .logo { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: var(--primary); margin-bottom: 30px; letter-spacing: 2px; border-bottom: 1px solid var(--primary-dim); padding-bottom: 10px; }
+        .logo { font-family: 'Orbitron', sans-serif; font-size: 1.1rem; color: var(--primary); margin-bottom: 30px; letter-spacing: 2px; border-bottom: 1px solid var(--primary-dim); padding-bottom: 15px; text-align: center; }
 
-        .section-title { font-size: 0.7rem; color: #666; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }
+        .section-title { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 2px; font-weight: bold; }
 
-        /* Boutons de sélection */
-        .grid-types { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; }
+        /* Grille de sélection des unités */
+        .grid-types { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px; }
         
         .type-card {
-            background: var(--accent); border: 1px solid #333; padding: 15px; border-radius: 8px;
-            text-align: center; cursor: pointer; transition: all 0.2s ease; font-size: 0.8rem;
+            background: rgba(255,255,255,0.03); border: 1px solid #333; padding: 15px; border-radius: 4px;
+            text-align: center; cursor: pointer; transition: all 0.2s ease; font-size: 0.75rem; color: #888;
         }
-        .type-card img { width: 24px; display: block; margin: 0 auto 8px; filter: invert(1); opacity: 0.6; }
-        .type-card:hover { border-color: var(--primary); background: var(--primary-dim); }
-        .type-card.active { border-color: var(--primary); background: var(--primary-dim); box-shadow: 0 0 15px var(--primary-dim); }
-        .type-card.active img { opacity: 1; }
+        .type-card img { width: 28px; display: block; margin: 0 auto 10px; filter: invert(1); opacity: 0.4; transition: 0.2s; }
+        .type-card:hover { border-color: var(--primary); color: #fff; }
+        .type-card.active { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); box-shadow: inset 0 0 10px var(--primary-dim); }
+        .type-card.active img { opacity: 1; filter: invert(1) drop-shadow(0 0 5px var(--primary)); }
 
-        /* Bouton Actions */
+        /* Actions */
         .btn-action {
-            width: 100%; padding: 12px; border-radius: 6px; border: none; font-family: 'Orbitron', sans-serif;
-            font-size: 0.8rem; cursor: pointer; transition: 0.3s; margin-top: auto;
+            width: 100%; padding: 12px; border-radius: 4px; border: none; font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem; cursor: pointer; transition: 0.3s; margin-top: auto; letter-spacing: 1px;
         }
-        .btn-clear { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
-        .btn-clear:hover { background: var(--danger); color: white; }
+        .btn-clear { background: transparent; border: 1px solid var(--danger); color: var(--danger); opacity: 0.7; }
+        .btn-clear:hover { background: var(--danger); color: white; opacity: 1; }
 
-        /* Custom Leaflet Design */
-        .leaflet-container { background: #0a0a0a !important; }
-        .leaflet-vignette { pointer-events: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; box-shadow: inset 0 0 150px black; z-index: 1000; }
-        
-        /* Tooltip & Popups */
-        .leaflet-popup-content-wrapper { background: var(--sidebar-bg); color: white; border: 1px solid var(--primary); border-radius: 4px; }
+        /* Popups & Tooltips */
+        .leaflet-popup-content-wrapper { background: var(--sidebar-bg); color: white; border: 1px solid var(--primary); border-radius: 2px; font-family: 'Roboto Mono', monospace; }
         .leaflet-popup-tip { background: var(--primary); }
+        .delete-single-btn { background: var(--danger); color: white; border: none; padding: 6px; width: 100%; cursor: pointer; margin-top: 10px; font-size: 10px; font-weight: bold; }
 
-        /* Notifications (Toast) */
+        /* Notifications */
         #toast {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: var(--primary); color: black; padding: 10px 20px; border-radius: 30px;
-            font-weight: bold; font-size: 0.8rem; opacity: 0; transition: 0.5s; z-index: 2000;
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--primary); color: black; padding: 8px 24px; border-radius: 4px;
+            font-weight: bold; font-size: 0.7rem; opacity: 0; transition: 0.4s; z-index: 2000; pointer-events: none;
+            font-family: 'Orbitron', sans-serif;
         }
     </style>
 </head>
@@ -76,36 +74,38 @@
     <div id="sidebar">
         <div class="logo">TI-WITECH // HQ</div>
         
-        <div class="section-title">Déploiement Unités</div>
+        <div class="section-title">Unités de déploiement</div>
         <div class="grid-types">
             <div class="type-card active" onclick="setType('infantry', this)">
-                <img src="https://cdn-icons-png.flaticon.com/512/711/711769.png"> INF
+                <img src="https://cdn-icons-png.flaticon.com/512/711/711769.png"> INFANTRY
             </div>
             <div class="type-card" onclick="setType('vehicle', this)">
-                <img src="https://cdn-icons-png.flaticon.com/512/2083/2083320.png"> VHC
+                <img src="https://cdn-icons-png.flaticon.com/512/2083/2083320.png"> VEHICLE
             </div>
             <div class="type-card" onclick="setType('enemy', this)">
-                <img src="https://cdn-icons-png.flaticon.com/512/822/822143.png"> ENY
+                <img src="https://cdn-icons-png.flaticon.com/512/822/822143.png"> ENEMY
             </div>
             <div class="type-card" onclick="setType('objective', this)">
-                <img src="https://cdn-icons-png.flaticon.com/512/3551/3551525.png"> OBJ
+                <img src="https://cdn-icons-png.flaticon.com/512/3551/3551525.png"> OBJECTIVE
             </div>
         </div>
 
-        <div class="section-title">Opérations</div>
-        <button class="btn-action btn-clear" onclick="clearAllPings()">RESET CARTE</button>
+        <div class="section-title">Système</div>
+        <button class="btn-action btn-clear" onclick="clearAllPings()">WIPE ALL DATA</button>
     </div>
 
-    <div id="map">
-        <div class="leaflet-vignette"></div>
-    </div>
+    <div id="map"></div>
 </div>
 
-<div id="toast">SYSTÈME MIS À JOUR</div>
+<div id="toast">TRANSMISSION REÇUE</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    // --- CONFIGURATION DE LA CARTE ALTIS ---
+    const imgW = 2048;
+    const imgH = 1512;
     let currentType = 'infantry';
+
     const iconUrls = {
         infantry: 'https://cdn-icons-png.flaticon.com/512/711/711769.png',
         vehicle: 'https://cdn-icons-png.flaticon.com/512/2083/2083320.png',
@@ -113,12 +113,24 @@
         objective: 'https://cdn-icons-png.flaticon.com/512/3551/3551525.png'
     };
 
-    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, zoomControl: false });
+    // Initialisation avec CRS.Simple pour une image rectangulaire
+    const map = L.map('map', { 
+        crs: L.CRS.Simple, 
+        minZoom: -2, 
+        zoomControl: false,
+        attributionControl: false 
+    });
+
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    const imageBounds = [[0, 0], [1000, 1000]];
-    const mapImg = L.imageOverlay('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Altis_map_Arma_3.png/800px-Altis_map_Arma_3.png', imageBounds).addTo(map);
+    // Définition des limites exactes [y, x]
+    const imageBounds = [[0, 0], [imgH, imgW]];
+    
+    // Remplacer 'altis.jpg' par le nom de ton fichier sur GitHub
+    const mapImg = L.imageOverlay('altis.jpg', imageBounds).addTo(map);
     map.fitBounds(imageBounds);
+
+    // --- FONCTIONS SYSTÈME ---
 
     function showToast(text) {
         const t = document.getElementById('toast');
@@ -133,7 +145,10 @@
     }
 
     const getIcon = (type) => L.icon({
-        iconUrl: iconUrls[type], iconSize: [32, 32], iconAnchor: [16, 16]
+        iconUrl: iconUrls[type],
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -10]
     });
 
     async function loadPings() {
@@ -141,50 +156,60 @@
             const res = await fetch('/pings');
             const pings = await res.json();
             
-            map.eachLayer((layer) => { if (layer instanceof L.Marker) map.removeLayer(layer); });
+            // Nettoyage des marqueurs existants
+            map.eachLayer((layer) => { 
+                if (layer instanceof L.Marker) map.removeLayer(layer); 
+            });
 
             pings.forEach(p => {
                 const marker = L.marker([p.x, p.y], { icon: getIcon(p.type) }).addTo(map);
                 marker.bindPopup(`
-                    <div style="padding:10px; min-width:150px">
-                        <strong style="color:var(--primary)">${p.type.toUpperCase()}</strong><br>
-                        <p style="margin:5px 0">${p.label}</p>
-                        <button onclick="deletePing(${p.id})" style="background:none; border:1px solid var(--danger); color:var(--danger); width:100%; cursor:pointer; font-size:10px">DÉTRUIRE</button>
+                    <div style="min-width:140px; text-align:center;">
+                        <span style="color:var(--primary); font-size:10px; font-weight:bold;">// ${p.type.toUpperCase()}</span>
+                        <p style="margin:8px 0; font-size:12px;">${p.label}</p>
+                        <button onclick="deletePing(${p.id})" class="delete-single-btn">TERMINATE</button>
                     </div>
                 `);
             });
-        } catch(e) { console.error("Erreur de synchro"); }
+        } catch(e) { console.error("Sync error"); }
     }
 
     map.on('click', async function(e) {
-        const label = prompt("ID DU CONTACT :");
+        const label = prompt("IDENTIFICATION DU CONTACT :");
         if (!label) return;
 
         await fetch('/pings', {
             method: 'POST',
-            body: JSON.stringify({ x: e.latlng.lat, y: e.latlng.lng, label: label, type: currentType }),
+            body: JSON.stringify({ 
+                x: e.latlng.lat, 
+                y: e.latlng.lng, 
+                label: label, 
+                type: currentType 
+            }),
             headers: { 'Content-Type': 'application/json' }
         });
-        showToast("SIGNAL ENVOYÉ");
+        showToast("SIGNAL LOCALISÉ");
         loadPings();
     });
 
     async function deletePing(id) {
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
-        showToast("UNITÉ RETIRÉE");
+        showToast("CIBLE ÉLIMINÉE");
         loadPings();
     }
 
     async function clearAllPings() {
-        if(confirm("FORMATER TOUTES LES DONNÉES ?")) {
+        if(confirm("ATTENTION : EFFACER TOUTES LES DONNÉES TACTIQUES ?")) {
             await fetch('/pings?id=all', { method: 'DELETE' });
             showToast("CARTE RÉINITIALISÉE");
             loadPings();
         }
     }
 
+    // Intervalle de rafraîchissement (5 secondes)
     setInterval(loadPings, 5000);
     loadPings();
+
 </script>
 </body>
 </html>
