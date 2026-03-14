@@ -1,156 +1,97 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>TACTICAL COMMAND | FIX</title>
+    <title>ALTIS TACTICAL</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --blue: #00d2ff; --red: #ff3e3e; --green: #00ff41; --bg: #05070a; }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: monospace; color: white; overflow: hidden; }
-        #app-container { display: flex; height: 100vh; }
-        #sidebar { width: 260px; background: #0a0e14; border-right: 2px solid #1a222d; padding: 20px; z-index: 1001; display: flex; flex-direction: column; }
-        #map { flex-grow: 1; background: #000; }
-        .btn { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #2a3544; background: #141b24; color: #a0aab8; cursor: pointer; font-weight: bold; border-radius: 4px; text-align: left; }
-        .btn.active { border-color: var(--green); color: var(--green); background: #1c2632; }
-        #draw-ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; display: none; background: rgba(0,0,0,0.9); padding: 15px; border: 2px solid var(--green); border-radius: 8px; }
-        .save-btn { background: var(--green); color: black; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; }
-        .wipe-btn { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: none; padding: 10px; cursor: pointer; }
-        /* Style des marqueurs tactiques */
-        .tactical-icon { display: flex; align-items: center; justify-content: center; border: 2px solid white; font-weight: bold; font-size: 12px; color: black; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
+        body { margin: 0; background: #000; color: white; font-family: sans-serif; }
+        #app { display: flex; height: 100vh; }
+        #sidebar { width: 220px; background: #111; padding: 15px; border-right: 2px solid #333; }
+        #map { flex-grow: 1; }
+        .btn { width: 100%; padding: 12px; margin-bottom: 5px; cursor: pointer; border: 1px solid #444; background: #222; color: white; font-weight: bold; text-align: left; }
+        .btn.active { background: #00ff41; color: black; }
+        .clear { background: #ff3e3e; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-<div id="draw-ui">
-    <button class="save-btn" onclick="finishDrawing()">💾 ENREGISTRER LE TRACÉ</button>
-</div>
-
-<div id="app-container">
+<div id="app">
     <div id="sidebar">
-        <h2 style="color:var(--green); font-size: 1.2rem;">ALTIS COMMAND</h2>
-        <p style="font-size: 0.7rem; color: #555;">UNITÉS ALLIÉES</p>
-        <button class="btn active" onclick="setType('inf_blue', this)">[||] INFANTERIE</button>
-        <button class="btn" onclick="setType('veh_blue', this)">[ O ] VÉHICULE</button>
-        
-        <p style="font-size: 0.7rem; color: #555;">MENACES</p>
-        <button class="btn" onclick="setType('inf_red', this)">[||] ENNEMI INF</button>
-        <button class="btn" onclick="setType('veh_red', this)">[ O ] ENNEMI VHC</button>
-        
-        <p style="font-size: 0.7rem; color: #555;">DESSIN</p>
-        <button class="btn" onclick="setType('arrow', this)">➔ FLÈCHE</button>
-        <button class="btn" onclick="setType('zone', this)">⬢ ZONE</button>
-
-        <button class="wipe-btn" onclick="clearAll()">EFFACER TOUT</button>
+        <h3>UNITÉS</h3>
+        <button class="btn active" onclick="setType('inf_blue', this)">👤 ALLIÉ (BLEU)</button>
+        <button class="btn" onclick="setType('inf_red', this)">👤 ENNEMI (ROUGE)</button>
+        <button class="btn" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
+        <button class="btn clear" onclick="clearAll()">TOUT EFFACER</button>
     </div>
     <div id="map"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.6.0/leaflet.polylinedecorator.min.js"></script>
-
 <script>
-    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false });
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, zoomControl: false });
     const bounds = [[0, 0], [1512, 2048]];
     L.imageOverlay('altis.webp', bounds).addTo(map);
     map.fitBounds(bounds);
 
     let currentType = 'inf_blue';
-    let drawPoints = [];
-    let tempLayer = null;
+    let firstPoint = null; // Pour le système de flèche en 2 clics
 
-    // Fonction pour créer les icônes tactiques
-    function getTacticalIcon(type) {
-        let color = type.includes('blue') ? '#00d2ff' : '#ff3e3e';
-        let symbol = type.includes('inf') ? '||' : 'O';
-        return L.divIcon({
-            className: '',
-            html: `<div class="tactical-icon" style="background:${color}; width:30px; height:20px;">${symbol}</div>`,
-            iconSize: [30, 20], iconAnchor: [15, 10]
-        });
+    function setType(t, b) {
+        currentType = t;
+        document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+        b.classList.add('active');
+        firstPoint = null; 
     }
 
-    function setType(type, btn) {
-        currentType = type;
-        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('draw-ui').style.display = (type === 'arrow' || type === 'zone') ? 'block' : 'none';
-        cancelDraw();
-    }
-
-    function cancelDraw() {
-        drawPoints = [];
-        if (tempLayer) map.removeLayer(tempLayer);
-    }
-
-    async function loadData() {
+    async function load() {
         const res = await fetch('/pings');
         const data = await res.json();
-        
-        // On nettoie la carte avant de redessiner
-        map.eachLayer(l => {
-            if (l instanceof L.Marker || l instanceof L.Polyline || l instanceof L.Polygon || l instanceof L.PolylineDecorator) {
-                if (!l._url) map.removeLayer(l);
-            }
-        });
+        map.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.Polyline) if(!l._url) map.removeLayer(l); });
 
         data.forEach(p => {
-            const popup = `<button onclick="deleteItem(${p.id})" style="background:red;color:white;border:none;cursor:pointer;width:100%">SUPPRIMER</button>`;
+            const color = p.type.includes('blue') ? '#00d2ff' : '#ff3e3e';
             if (p.points_json) {
                 const pts = JSON.parse(p.points_json);
-                if (p.type === 'zone') {
-                    L.polygon(pts, {color: '#00ff41', fillOpacity: 0.3}).addTo(map).bindPopup(popup);
-                } else {
-                    let line = L.polyline(pts, {color: '#00ff41', weight: 5}).addTo(map).bindPopup(popup);
-                    L.polylineDecorator(line, {
-                        patterns: [{ offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 15, pathOptions: {color: '#00ff41', fillOpacity: 1}}) }]
-                    }).addTo(map);
-                }
-            } else if (p.x !== null) {
-                L.marker([p.x, p.y], {icon: getTacticalIcon(p.type)}).addTo(map).bindPopup(popup);
+                L.polyline(pts, {color: '#00ff41', weight: 5}).addTo(map).bindPopup(`<button onclick="del(${p.id})">Supprimer</button>`);
+            } else {
+                L.circleMarker([p.x, p.y], {color: color, radius: 8, fillOpacity: 0.8}).addTo(map).bindPopup(`<button onclick="del(${p.id})">Supprimer</button>`);
             }
         });
     }
 
     map.on('click', e => {
-        if (currentType === 'arrow' || currentType === 'zone') {
-            drawPoints.push([e.latlng.lat, e.latlng.lng]);
-            if (tempLayer) map.removeLayer(tempLayer);
-            tempLayer = (currentType === 'arrow') ? L.polyline(drawPoints, {color: 'white', dashArray: '5,5'}) : L.polygon(drawPoints, {color: 'white', dashArray: '5,5'});
-            tempLayer.addTo(map);
+        const pos = [e.latlng.lat, e.latlng.lng];
+        
+        if (currentType === 'arrow') {
+            if (!firstPoint) {
+                firstPoint = pos;
+                L.circleMarker(pos, {radius: 3, color: 'white'}).addTo(map);
+            } else {
+                save({ type: 'arrow', points_json: JSON.stringify([firstPoint, pos]) });
+                firstPoint = null;
+            }
         } else {
-            saveItem({ x: e.latlng.lat, y: e.latlng.lng, type: currentType });
+            save({ x: pos[0], y: pos[1], type: currentType });
         }
     });
 
-    async function finishDrawing() {
-        if (drawPoints.length < 2) return;
-        await saveItem({ type: currentType, points_json: JSON.stringify(drawPoints) });
-        cancelDraw();
+    async function save(obj) {
+        await fetch('/pings', { method: 'POST', body: JSON.stringify(obj) });
+        load();
     }
 
-    async function saveItem(obj) {
-        await fetch('/pings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(obj)
-        });
-        loadData();
-    }
-
-    async function deleteItem(id) {
+    async function del(id) {
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
-        loadData();
+        load();
     }
 
     async function clearAll() {
-        if (confirm("Tout effacer ?")) {
-            await fetch('/pings?id=all', { method: 'DELETE' });
-            loadData();
-        }
+        if(confirm("Effacer la carte ?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); }
     }
 
-    loadData();
-    setInterval(loadData, 5000);
+    load();
+    setInterval(load, 4000);
 </script>
 </body>
 </html>
