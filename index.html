@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TACTICAL HQ | Arma3</title>
+    <title>TACTICAL HQ | Altis</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet">
     
@@ -21,20 +21,23 @@
 
         #app-container { display: flex; height: 100vh; width: 100vw; }
         
-        /* La carte */
-        #map { flex-grow: 1; background: #000; cursor: crosshair; }
+        #map { flex-grow: 1; background: #000; cursor: crosshair; position: relative; }
 
-        /* Sidebar Professionnelle */
+        /* Effet radar / Vignette sur la carte */
+        #map::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.8); pointer-events: none; z-index: 1000;
+        }
+
         #sidebar {
             width: 280px; background: var(--sidebar-bg); border-right: 1px solid var(--primary-dim);
             display: flex; flex-direction: column; padding: 25px; box-shadow: 10px 0 30px rgba(0,0,0,0.5); z-index: 1001;
         }
 
-        .logo { font-family: 'Orbitron', sans-serif; font-size: 1.1rem; color: var(--primary); margin-bottom: 30px; letter-spacing: 2px; border-bottom: 1px solid var(--primary-dim); padding-bottom: 15px; text-align: center; }
+        .logo { font-family: 'Orbitron', sans-serif; font-size: 1.1rem; color: var(--primary); margin-bottom: 30px; letter-spacing: 2px; border-bottom: 1px solid var(--primary-dim); padding-bottom: 15px; text-align: center; text-shadow: 0 0 10px var(--primary-dim); }
 
         .section-title { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 2px; font-weight: bold; }
 
-        /* Grille de sélection des unités */
         .grid-types { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px; }
         
         .type-card {
@@ -46,7 +49,6 @@
         .type-card.active { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); box-shadow: inset 0 0 10px var(--primary-dim); }
         .type-card.active img { opacity: 1; filter: invert(1) drop-shadow(0 0 5px var(--primary)); }
 
-        /* Actions */
         .btn-action {
             width: 100%; padding: 12px; border-radius: 4px; border: none; font-family: 'Orbitron', sans-serif;
             font-size: 0.75rem; cursor: pointer; transition: 0.3s; margin-top: auto; letter-spacing: 1px;
@@ -54,12 +56,11 @@
         .btn-clear { background: transparent; border: 1px solid var(--danger); color: var(--danger); opacity: 0.7; }
         .btn-clear:hover { background: var(--danger); color: white; opacity: 1; }
 
-        /* Popups & Tooltips */
-        .leaflet-popup-content-wrapper { background: var(--sidebar-bg); color: white; border: 1px solid var(--primary); border-radius: 2px; font-family: 'Roboto Mono', monospace; }
+        /* Popups */
+        .leaflet-popup-content-wrapper { background: var(--sidebar-bg); color: white; border: 1px solid var(--primary); border-radius: 2px; }
         .leaflet-popup-tip { background: var(--primary); }
-        .delete-single-btn { background: var(--danger); color: white; border: none; padding: 6px; width: 100%; cursor: pointer; margin-top: 10px; font-size: 10px; font-weight: bold; }
+        .delete-single-btn { background: var(--danger); color: white; border: none; padding: 6px; width: 100%; cursor: pointer; margin-top: 10px; font-size: 10px; font-weight: bold; font-family: 'Roboto Mono'; }
 
-        /* Notifications */
         #toast {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
             background: var(--primary); color: black; padding: 8px 24px; border-radius: 4px;
@@ -72,7 +73,7 @@
 
 <div id="app-container">
     <div id="sidebar">
-        <div class="logo">Altis // HQ</div>
+        <div class="logo">ALTIS // HQ</div>
         
         <div class="section-title">Unités de déploiement</div>
         <div class="grid-types">
@@ -101,7 +102,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // --- CONFIGURATION DE LA CARTE ALTIS ---
     const imgW = 2048;
     const imgH = 1512;
     let currentType = 'infantry';
@@ -113,24 +113,20 @@
         objective: 'https://cdn-icons-png.flaticon.com/512/3551/3551525.png'
     };
 
-    // Initialisation avec CRS.Simple pour une image rectangulaire
     const map = L.map('map', { 
         crs: L.CRS.Simple, 
         minZoom: -2, 
+        maxZoom: 2,
         zoomControl: false,
         attributionControl: false 
     });
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Définition des limites exactes [y, x]
     const imageBounds = [[0, 0], [imgH, imgW]];
-    
-    // Remplacer 'altis.jpg' par le nom de ton fichier sur GitHub
-    const mapImg = L.imageOverlay('altis.jpg', imageBounds).addTo(map);
+    // --- CHANGEMENT ICI : altis.webp ---
+    const mapImg = L.imageOverlay('altis.webp', imageBounds).addTo(map);
     map.fitBounds(imageBounds);
-
-    // --- FONCTIONS SYSTÈME ---
 
     function showToast(text) {
         const t = document.getElementById('toast');
@@ -156,7 +152,6 @@
             const res = await fetch('/pings');
             const pings = await res.json();
             
-            // Nettoyage des marqueurs existants
             map.eachLayer((layer) => { 
                 if (layer instanceof L.Marker) map.removeLayer(layer); 
             });
@@ -166,7 +161,7 @@
                 marker.bindPopup(`
                     <div style="min-width:140px; text-align:center;">
                         <span style="color:var(--primary); font-size:10px; font-weight:bold;">// ${p.type.toUpperCase()}</span>
-                        <p style="margin:8px 0; font-size:12px;">${p.label}</p>
+                        <p style="margin:8px 0; font-size:12px; color:white;">${p.label}</p>
                         <button onclick="deletePing(${p.id})" class="delete-single-btn">TERMINATE</button>
                     </div>
                 `);
@@ -180,12 +175,7 @@
 
         await fetch('/pings', {
             method: 'POST',
-            body: JSON.stringify({ 
-                x: e.latlng.lat, 
-                y: e.latlng.lng, 
-                label: label, 
-                type: currentType 
-            }),
+            body: JSON.stringify({ x: e.latlng.lat, y: e.latlng.lng, label: label, type: currentType }),
             headers: { 'Content-Type': 'application/json' }
         });
         showToast("SIGNAL LOCALISÉ");
@@ -206,10 +196,8 @@
         }
     }
 
-    // Intervalle de rafraîchissement (5 secondes)
     setInterval(loadPings, 5000);
     loadPings();
-
 </script>
 </body>
 </html>
