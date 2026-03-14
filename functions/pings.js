@@ -8,30 +8,39 @@ export async function onRequest(context) {
         try {
             if (id === "all") {
                 await env.DB.prepare("DELETE FROM pings").run();
-                return new Response("Base de données réinitialisée", { status: 200 });
+                return new Response("Carte réinitialisée", { status: 200 });
             } else {
                 await env.DB.prepare("DELETE FROM pings WHERE id = ?").bind(id).run();
-                return new Response("Entité supprimée", { status: 200 });
+                return new Response("Élément supprimé", { status: 200 });
             }
         } catch (err) {
             return new Response(err.message, { status: 500 });
         }
     }
 
-    // --- AJOUT D'UN POINT (POST) ---
+    // --- AJOUT D'UN ÉLÉMENT (POST) ---
     if (request.method === "POST") {
         try {
             const data = await request.json();
-            await env.DB.prepare("INSERT INTO pings (x, y, label, type) VALUES (?, ?, ?, ?)")
-                .bind(data.x, data.y, data.label, data.type)
+            
+            // On insère, en gérant le cas où c'est un point simple ou une forme
+            await env.DB.prepare("INSERT INTO pings (x, y, label, type, points_json) VALUES (?, ?, ?, ?, ?)")
+                .bind(
+                    data.x || null, // Nul si c't'une forme
+                    data.y || null, // Nul si c't'une forme
+                    data.label || '',
+                    data.type,
+                    data.points_json || null // Contient les points si c't'une forme
+                )
                 .run();
-            return new Response("Signal enregistré", { status: 201 });
+                
+            return new Response("Élément enregistré", { status: 201 });
         } catch (err) {
             return new Response(err.message, { status: 500 });
         }
     }
 
-    // --- LECTURE DES POINTS (GET) ---
+    // --- LECTURE DES ÉLÉMENTS (GET) ---
     try {
         const { results } = await env.DB.prepare("SELECT * FROM pings ORDER BY timestamp DESC").all();
         return new Response(JSON.stringify(results), {
