@@ -2,154 +2,143 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TACTICAL HQ | Altis</title>
+    <title>TACTICAL HQ | Altis Edit</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet">
-    
     <style>
-        :root {
-            --primary: #00ff41;
-            --danger: #ff3e3e;
-            --sidebar-bg: rgba(13, 17, 23, 0.98);
+        :root { --primary: #00ff41; --danger: #ff3e3e; --bg: #080a0c; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: sans-serif; color: white; overflow: hidden; }
+        #app-container { display: flex; height: 100vh; }
+        #sidebar { width: 250px; background: #0d1117; border-right: 1px solid var(--primary); padding: 20px; display: flex; flex-direction: column; z-index: 1001; }
+        #map { flex-grow: 1; background: #000; }
+        
+        .logo { color: var(--primary); font-weight: bold; text-align: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .type-btn { width: 100%; padding: 10px; margin-bottom: 5px; background: #1f2937; border: 1px solid #333; color: white; cursor: pointer; text-align: left; }
+        .type-btn:hover { border-color: var(--primary); }
+        .type-btn.active { background: var(--primary); color: black; font-weight: bold; }
+        
+        #draw-controls { 
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
+            z-index: 2000; display: none; background: rgba(0,0,0,0.9); padding: 15px; 
+            border: 2px solid var(--primary); border-radius: 5px;
         }
-
-        body, html { margin: 0; padding: 0; height: 100%; background: #080a0c; font-family: 'Roboto Mono', monospace; color: #e0e0e0; overflow: hidden; }
-        #app-container { display: flex; height: 100vh; width: 100vw; }
-        #map { flex-grow: 1; background: #000; cursor: crosshair; }
-
-        #sidebar {
-            width: 280px; background: var(--sidebar-bg); border-right: 1px solid rgba(0, 255, 65, 0.2);
-            display: flex; flex-direction: column; padding: 20px; z-index: 1001;
-        }
-
-        .logo { font-family: 'Orbitron', sans-serif; color: var(--primary); text-align: center; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 255, 65, 0.2); padding-bottom: 10px; }
-        .section-title { font-size: 0.7rem; color: #888; text-transform: uppercase; margin: 15px 0 10px; }
-
-        .grid-types { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .type-card {
-            background: rgba(255,255,255,0.05); border: 1px solid #333; padding: 10px; border-radius: 4px;
-            text-align: center; cursor: pointer; font-size: 0.7rem; transition: 0.2s;
-        }
-        .type-card:hover { border-color: var(--primary); }
-        .type-card.active { border-color: var(--primary); background: rgba(0, 255, 65, 0.1); color: var(--primary); }
-        .type-card img { width: 20px; display: block; margin: 0 auto 5px; filter: invert(1); }
-
-        .btn-clear { margin-top: auto; padding: 10px; background: transparent; border: 1px solid var(--danger); color: var(--danger); cursor: pointer; font-family: 'Orbitron'; }
-        .btn-clear:hover { background: var(--danger); color: white; }
-
-        #draw-instruction {
-            position: absolute; bottom: 20px; left: 300px; background: rgba(0,0,0,0.8);
-            color: var(--primary); padding: 10px; border: 1px solid var(--primary); z-index: 1000; display: none;
-        }
+        .save-btn { background: var(--primary); color: black; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; animation: blink 1.5s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        .clear-btn { margin-top: auto; padding: 10px; background: var(--danger); color: white; border: none; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
+<div id="draw-controls">
+    <span id="draw-text">MODE DESSIN ACTIF</span>
+    <button class="save-btn" onclick="finishDrawing()">💾 SAUVEGARDER LE TRACÉ</button>
+</div>
+
 <div id="app-container">
     <div id="sidebar">
         <div class="logo">ALTIS // HQ</div>
-        
-        <div class="section-title">Unités</div>
-        <div class="grid-types">
-            <div class="type-card active" onclick="setType('infantry', this)"><img src="https://cdn-icons-png.flaticon.com/512/711/711769.png">INF</div>
-            <div class="type-card" onclick="setType('vehicle', this)"><img src="https://cdn-icons-png.flaticon.com/512/2083/2083320.png">VHC</div>
-            <div class="type-card" onclick="setType('enemy', this)"><img src="https://cdn-icons-png.flaticon.com/512/822/822143.png">ENY</div>
-        </div>
-
-        <div class="section-title">Tactique</div>
-        <div class="grid-types">
-            <div class="type-card" onclick="setType('mine', this)">✹ MINE</div>
-            <div class="type-card" onclick="setType('danger', this)">⚠ DANGER</div>
-            <div class="type-card" onclick="setType('arrow', this)">➔ FLÈCHE</div>
-            <div class="type-card" onclick="setType('zone', this)">⬢ ZONE</div>
-        </div>
-
-        <button class="btn-clear" onclick="clearAll()">WIPE DATA</button>
+        <button class="type-btn active" onclick="setType('infantry', this)">👤 INFANTERIE</button>
+        <button class="type-btn" onclick="setType('vehicle', this)">🚜 VÉHICULE</button>
+        <button class="type-btn" onclick="setType('enemy', this)">⚠️ ENNEMI</button>
+        <hr style="width:100%; border:0; border-top:1px solid #333; margin:15px 0;">
+        <button class="type-btn" onclick="setType('arrow', this)">➔ FLÈCHE</button>
+        <button class="type-btn" onclick="setType('zone', this)">⬢ ZONE</button>
+        <button class="clear-btn" onclick="clearAll()">WIPE ALL DATA</button>
     </div>
     <div id="map"></div>
 </div>
 
-<div id="draw-instruction">Cliquez pour tracer. Double-cliquez pour terminer.</div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.6.0/leaflet.polylinedecorator.min.js"></script>
-
 <script>
-    const imgW = 2048, imgH = 1512;
-    let currentType = 'infantry', isDrawing = false, drawPoints = [], tempLayer = null;
-
     const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false });
-    const imageBounds = [[0, 0], [imgH, imgW]];
+    const imageBounds = [[0, 0], [1512, 2048]];
     L.imageOverlay('altis.webp', imageBounds).addTo(map);
     map.fitBounds(imageBounds);
 
-    function setType(type, el) {
+    let currentType = 'infantry';
+    let drawPoints = [];
+    let tempLayer = null;
+
+    function setType(type, btn) {
         currentType = type;
-        document.querySelectorAll('.type-card').forEach(c => c.classList.remove('active'));
-        el.classList.add('active');
-        isDrawing = false; drawPoints = [];
-        document.getElementById('draw-instruction').style.display = (type === 'arrow' || type === 'zone') ? 'block' : 'none';
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Afficher/Masquer les contrôles de dessin
+        const isDrawing = (type === 'arrow' || type === 'zone');
+        document.getElementById('draw-controls').style.display = isDrawing ? 'block' : 'none';
+        
+        // Reset dessin en cours
+        drawPoints = [];
+        if(tempLayer) map.removeLayer(tempLayer);
     }
 
-    async function loadPings() {
+    async function loadData() {
         const res = await fetch('/pings');
         const data = await res.json();
-        map.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.Polyline || l instanceof L.Polygon || l instanceof L.PolylineDecorator) if(l.options.alt !== 'map') map.removeLayer(l); });
+        
+        // On nettoie tout sauf l'image de fond
+        map.eachLayer(l => {
+            if (l instanceof L.Marker || l instanceof L.Polyline || l instanceof L.Polygon) {
+                if(!l._url) map.removeLayer(l); // Ne pas supprimer l'imageOverlay
+            }
+        });
 
         data.forEach(p => {
             let layer;
-            const content = `<button onclick="deletePing(${p.id})" style="background:red;color:white;border:none;width:100%;cursor:pointer">EFFACER</button>`;
+            const popup = `<button onclick="deleteItem(${p.id})" style="background:red;color:white;border:none;width:100%;padding:5px;cursor:pointer">SUPPRIMER</button>`;
             
             if (p.points_json) {
                 const pts = JSON.parse(p.points_json);
-                if (p.type === 'zone') layer = L.polygon(pts, {color: '#00ff41'}).addTo(map);
-                else {
-                    layer = L.polyline(pts, {color: '#00ff41'}).addTo(map);
-                    L.polylineDecorator(layer, {patterns: [{offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 15, pathOptions: {color: '#00ff41'}})}]}).addTo(map);
-                }
-            } else {
-                layer = L.marker([p.x, p.y]).addTo(map);
+                layer = (p.type === 'zone') ? L.polygon(pts, {color: '#00ff41'}) : L.polyline(pts, {color: '#00ff41'});
+            } else if (p.x && p.y) {
+                layer = L.marker([p.x, p.y]);
             }
-            if(layer) layer.bindPopup(content);
+            
+            if(layer) layer.addTo(map).bindPopup(popup);
         });
     }
 
     map.on('click', e => {
         if (currentType === 'arrow' || currentType === 'zone') {
-            isDrawing = true;
             drawPoints.push([e.latlng.lat, e.latlng.lng]);
             if (tempLayer) map.removeLayer(tempLayer);
-            tempLayer = (currentType === 'arrow') ? L.polyline(drawPoints, {color: '#00ff41'}).addTo(map) : L.polygon(drawPoints, {color: '#00ff41'}).addTo(map);
+            tempLayer = (currentType === 'arrow') ? L.polyline(drawPoints, {color: 'white', dashArray: '5, 10'}) : L.polygon(drawPoints, {color: 'white', dashArray: '5, 10'});
+            tempLayer.addTo(map);
         } else {
-            const label = prompt("Nom :");
-            savePing({ x: e.latlng.lat, y: e.latlng.lng, type: currentType, label: label });
+            saveItem({ x: e.latlng.lat, y: e.latlng.lng, type: currentType, label: 'Unité' });
         }
     });
 
-    map.on('dblclick', () => {
-        if (isDrawing) {
-            savePing({ type: currentType, points_json: JSON.stringify(drawPoints) });
-            isDrawing = false; drawPoints = []; if(tempLayer) map.removeLayer(tempLayer);
-        }
-    });
-
-    async function savePing(obj) {
-        await fetch('/pings', { method: 'POST', body: JSON.stringify(obj) });
-        loadPings();
+    async function finishDrawing() {
+        if (drawPoints.length < 2) { alert("Placez au moins 2 points !"); return; }
+        await saveItem({ type: currentType, points_json: JSON.stringify(drawPoints) });
+        drawPoints = [];
+        if(tempLayer) map.removeLayer(tempLayer);
+        showToast("TRACÉ ENREGISTRÉ");
     }
 
-    async function deletePing(id) {
+    async function saveItem(obj) {
+        await fetch('/pings', { method: 'POST', body: JSON.stringify(obj) });
+        loadData();
+    }
+
+    async function deleteItem(id) {
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
-        loadPings();
+        loadData();
     }
 
     async function clearAll() {
-        if(confirm("Tout effacer ?")) { await fetch('/pings?id=all', { method: 'DELETE' }); loadPings(); }
+        if(confirm("Voulez-vous tout effacer ?")) {
+            await fetch('/pings?id=all', { method: 'DELETE' });
+            loadData();
+        }
     }
 
-    loadPings();
-    setInterval(loadPings, 5000);
+    function showToast(m) { console.log(m); } // Optionnel
+
+    loadData();
+    setInterval(loadData, 5000); // Sync toutes les 5 sec
 </script>
 </body>
 </html>
