@@ -1,96 +1,188 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS TACTICAL</title>
+    <title>SITREP TERMINAL | ALTIS</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #000; color: white; font-family: sans-serif; }
+        :root { 
+            --primary: #00ff41; --blue: #00d2ff; --red: #ff3e3e; --bg: #05070a; 
+            --panel: rgba(13, 17, 23, 0.95);
+        }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: 'JetBrains Mono', monospace; color: white; overflow: hidden; }
+        
         #app { display: flex; height: 100vh; }
-        #sidebar { width: 220px; background: #111; padding: 15px; border-right: 2px solid #333; }
-        #map { flex-grow: 1; }
-        .btn { width: 100%; padding: 12px; margin-bottom: 5px; cursor: pointer; border: 1px solid #444; background: #222; color: white; font-weight: bold; text-align: left; }
-        .btn.active { background: #00ff41; color: black; }
-        .clear { background: #ff3e3e; margin-top: 20px; }
+        
+        /* Sidebar Stylisée */
+        #sidebar { 
+            width: 260px; background: var(--panel); border-right: 1px solid #1a222d; 
+            padding: 20px; display: flex; flex-direction: column; z-index: 1001;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+        }
+        
+        .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 30px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,255,65,0.3); }
+
+        .section-label { font-size: 0.65rem; color: #555; text-transform: uppercase; margin: 15px 0 8px; letter-spacing: 1px; font-weight: bold; }
+
+        .btn { 
+            width: 100%; padding: 12px; margin-bottom: 6px; border: 1px solid #2a3544; 
+            background: rgba(255,255,255,0.03); color: #8892b0; cursor: pointer; 
+            font-size: 0.8rem; font-weight: bold; transition: 0.2s; border-radius: 4px;
+            text-align: left;
+        }
+        .btn:hover { background: rgba(255,255,255,0.08); border-color: var(--blue); color: white; }
+        .btn.active { background: rgba(0, 255, 65, 0.1); border-color: var(--primary); color: var(--primary); }
+
+        /* Map & Overlay */
+        #map { flex-grow: 1; background: #000; position: relative; }
+        #map::after { content: ""; position: absolute; top:0; left:0; width:100%; height:100%; box-shadow: inset 0 0 100px rgba(0,0,0,0.7); pointer-events: none; z-index: 1000; }
+
+        .status-bar { position: absolute; bottom: 20px; right: 20px; background: var(--panel); padding: 10px 20px; border: 1px solid var(--primary); font-size: 0.7rem; color: var(--primary); z-index: 1001; pointer-events: none; text-transform: uppercase; }
+
+        /* Popups suppression */
+        .leaflet-popup-content-wrapper { background: #0d1117; color: white; border: 1px solid #333; border-radius: 4px; }
+        .del-btn { background: var(--red); color: white; border: none; width: 100%; padding: 8px; cursor: pointer; font-weight: bold; font-family: 'JetBrains Mono'; border-radius: 2px; }
+
+        .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.7rem; opacity: 0.6; transition: 0.3s; }
+        .clear-all:hover { opacity: 1; background: var(--red); color: white; }
     </style>
 </head>
 <body>
 
 <div id="app">
     <div id="sidebar">
-        <h3>UNITÉS</h3>
-        <button class="btn active" onclick="setType('inf_blue', this)">👤 ALLIÉ (BLEU)</button>
-        <button class="btn" onclick="setType('inf_red', this)">👤 ENNEMI (ROUGE)</button>
+        <div class="header">SITREP // ALTIS</div>
+        
+        <div class="section-label">Unités Alliées</div>
+        <button class="btn active" onclick="setType('inf_blue', this)">[||] INFANTERIE</button>
+        <button class="btn" onclick="setType('veh_blue', this)">[ O ] VÉHICULE</button>
+        
+        <div class="section-label">Hostiles</div>
+        <button class="btn" onclick="setType('inf_red', this)">[||] ENNEMI INF</button>
+        <button class="btn" onclick="setType('veh_red', this)">[ O ] ENNEMI VHC</button>
+        
+        <div class="section-label">Vecteurs Tactiques</div>
         <button class="btn" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
-        <button class="btn clear" onclick="clearAll()">TOUT EFFACER</button>
+        <button class="btn" onclick="setType('zone', this)">⬢ ZONE (3 CLICS)</button>
+
+        <button class="clear-all" onclick="clearAll()">RESET TERMINAL</button>
     </div>
+    
     <div id="map"></div>
+    <div class="status-bar" id="status">Système Opérationnel</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, zoomControl: false });
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false });
     const bounds = [[0, 0], [1512, 2048]];
     L.imageOverlay('altis.webp', bounds).addTo(map);
     map.fitBounds(bounds);
 
     let currentType = 'inf_blue';
-    let firstPoint = null; // Pour le système de flèche en 2 clics
+    let pointsBuffer = []; // Stocke les clics pour flèches et zones
 
     function setType(t, b) {
         currentType = t;
         document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
         b.classList.add('active');
-        firstPoint = null; 
+        pointsBuffer = []; // Reset si on change d'outil
+        updateStatus(`Mode: ${t}`);
+    }
+
+    function updateStatus(text) {
+        document.getElementById('status').innerText = text;
     }
 
     async function load() {
-        const res = await fetch('/pings');
-        const data = await res.json();
-        map.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.Polyline) if(!l._url) map.removeLayer(l); });
+        try {
+            const res = await fetch('/pings');
+            const data = await res.json();
+            
+            // On nettoie la carte (sauf l'image de fond)
+            map.eachLayer(l => {
+                if (l instanceof L.Marker || l instanceof L.CircleMarker || l instanceof L.Polyline || l instanceof L.Polygon) {
+                    if(!l._url) map.removeLayer(l);
+                }
+            });
 
-        data.forEach(p => {
-            const color = p.type.includes('blue') ? '#00d2ff' : '#ff3e3e';
-            if (p.points_json) {
-                const pts = JSON.parse(p.points_json);
-                L.polyline(pts, {color: '#00ff41', weight: 5}).addTo(map).bindPopup(`<button onclick="del(${p.id})">Supprimer</button>`);
-            } else {
-                L.circleMarker([p.x, p.y], {color: color, radius: 8, fillOpacity: 0.8}).addTo(map).bindPopup(`<button onclick="del(${p.id})">Supprimer</button>`);
-            }
-        });
+            data.forEach(p => {
+                const color = p.type.includes('blue') ? '#00d2ff' : (p.type.includes('red') ? '#ff3e3e' : '#00ff41');
+                const popup = `<button class="del-btn" onclick="del(${p.id})">SUPPRIMER</button>`;
+                
+                if (p.points_json) {
+                    const pts = JSON.parse(p.points_json);
+                    if (p.type === 'zone') {
+                        L.polygon(pts, {color: color, weight: 2, fillOpacity: 0.2}).addTo(map).bindPopup(popup);
+                    } else {
+                        L.polyline(pts, {color: color, weight: 4, opacity: 0.8}).addTo(map).bindPopup(popup);
+                    }
+                } else {
+                    L.circleMarker([p.x, p.y], {
+                        radius: 7, color: color, weight: 2, fillOpacity: 0.9, fillColor: color
+                    }).addTo(map).bindPopup(popup);
+                }
+            });
+        } catch(e) { console.error("Erreur sync"); }
     }
 
     map.on('click', e => {
         const pos = [e.latlng.lat, e.latlng.lng];
         
         if (currentType === 'arrow') {
-            if (!firstPoint) {
-                firstPoint = pos;
-                L.circleMarker(pos, {radius: 3, color: 'white'}).addTo(map);
-            } else {
-                save({ type: 'arrow', points_json: JSON.stringify([firstPoint, pos]) });
-                firstPoint = null;
+            pointsBuffer.push(pos);
+            updateStatus("Point A placé...");
+            if (pointsBuffer.length === 2) {
+                save({ type: 'arrow', points_json: JSON.stringify(pointsBuffer) });
+                pointsBuffer = [];
+                updateStatus("Flèche enregistrée");
             }
-        } else {
+        } 
+        else if (currentType === 'zone') {
+            pointsBuffer.push(pos);
+            updateStatus(`Zone: Point ${pointsBuffer.length}/3`);
+            if (pointsBuffer.length === 3) {
+                save({ type: 'zone', points_json: JSON.stringify(pointsBuffer) });
+                pointsBuffer = [];
+                updateStatus("Zone enregistrée");
+            }
+        } 
+        else {
             save({ x: pos[0], y: pos[1], type: currentType });
+            updateStatus("Unité déployée");
         }
     });
 
     async function save(obj) {
-        await fetch('/pings', { method: 'POST', body: JSON.stringify(obj) });
+        // Mise à jour visuelle immédiate (avant même que la DB réponde)
+        updateStatus("Envoi...");
+        await fetch('/pings', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(obj) 
+        });
         load();
     }
 
     async function del(id) {
+        updateStatus("Suppression...");
+        // On cache immédiatement l'élément pour que l'utilisateur ne sente pas de latence
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
         load();
     }
 
     async function clearAll() {
-        if(confirm("Effacer la carte ?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); }
+        if(confirm("Confirmer le WIPE complet de la carte ?")) {
+            updateStatus("Wiping...");
+            await fetch('/pings?id=all', { method: 'DELETE' });
+            load();
+        }
     }
 
+    // Premier chargement
     load();
+    // Rafraîchissement automatique toutes les 4 secondes
     setInterval(load, 4000);
 </script>
 </body>
