@@ -3,82 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TACTICAL HQ PRO | Altis</title>
+    <title>TACTICAL HQ | Altis</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --primary: #00ff41;
-            --primary-dim: rgba(0, 255, 65, 0.15);
             --danger: #ff3e3e;
-            --warning: #ffcc00;
-            --bg-dark: #080a0c;
             --sidebar-bg: rgba(13, 17, 23, 0.98);
-            --accent: #1f2937;
         }
 
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg-dark); font-family: 'Roboto Mono', monospace; color: #e0e0e0; overflow: hidden; }
-
+        body, html { margin: 0; padding: 0; height: 100%; background: #080a0c; font-family: 'Roboto Mono', monospace; color: #e0e0e0; overflow: hidden; }
         #app-container { display: flex; height: 100vh; width: 100vw; }
-        
-        #map { flex-grow: 1; background: #000; cursor: crosshair; position: relative; }
-
-        /* Effet radar */
-        #map::after {
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.8); pointer-events: none; z-index: 1000;
-        }
+        #map { flex-grow: 1; background: #000; cursor: crosshair; }
 
         #sidebar {
-            width: 300px; background: var(--sidebar-bg); border-right: 1px solid var(--primary-dim);
-            display: flex; flex-direction: column; padding: 20px; box-shadow: 10px 0 30px rgba(0,0,0,0.5); z-index: 1001;
-            overflow-y: auto;
+            width: 280px; background: var(--sidebar-bg); border-right: 1px solid rgba(0, 255, 65, 0.2);
+            display: flex; flex-direction: column; padding: 20px; z-index: 1001;
         }
 
-        .logo { font-family: 'Orbitron', sans-serif; font-size: 1.1rem; color: var(--primary); margin-bottom: 25px; letter-spacing: 2px; border-bottom: 1px solid var(--primary-dim); padding-bottom: 15px; text-align: center; text-shadow: 0 0 10px var(--primary-dim); }
+        .logo { font-family: 'Orbitron', sans-serif; color: var(--primary); text-align: center; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 255, 65, 0.2); padding-bottom: 10px; }
+        .section-title { font-size: 0.7rem; color: #888; text-transform: uppercase; margin: 15px 0 10px; }
 
-        .section-title { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 2px; font-weight: bold; margin-top: 15px;}
-
-        .grid-types { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        
+        .grid-types { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .type-card {
-            background: rgba(255,255,255,0.03); border: 1px solid #333; padding: 12px; border-radius: 4px;
-            text-align: center; cursor: pointer; transition: all 0.2s ease; font-size: 0.7rem; color: #888;
+            background: rgba(255,255,255,0.05); border: 1px solid #333; padding: 10px; border-radius: 4px;
+            text-align: center; cursor: pointer; font-size: 0.7rem; transition: 0.2s;
         }
-        .type-card img, .type-card .icon-placeholder { width: 24px; height: 24px; display: block; margin: 0 auto 8px; filter: invert(1); opacity: 0.4; transition: 0.2s; text-align: center; font-size: 20px;}
-        .type-card:hover { border-color: var(--primary); color: #fff; }
-        .type-card.active { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); box-shadow: inset 0 0 10px var(--primary-dim); }
-        .type-card.active img, .type-card.active .icon-placeholder { opacity: 1; filter: invert(1) drop-shadow(0 0 5px var(--primary)); }
+        .type-card:hover { border-color: var(--primary); }
+        .type-card.active { border-color: var(--primary); background: rgba(0, 255, 65, 0.1); color: var(--primary); }
+        .type-card img { width: 20px; display: block; margin: 0 auto 5px; filter: invert(1); }
 
-        .btn-action {
-            width: 100%; padding: 12px; border-radius: 4px; border: none; font-family: 'Orbitron', sans-serif;
-            font-size: 0.75rem; cursor: pointer; transition: 0.3s; margin-top: auto; letter-spacing: 1px;
-        }
-        .btn-clear { background: transparent; border: 1px solid var(--danger); color: var(--danger); opacity: 0.7; margin-top: 20px;}
-        .btn-clear:hover { background: var(--danger); color: white; opacity: 1; }
+        .btn-clear { margin-top: auto; padding: 10px; background: transparent; border: 1px solid var(--danger); color: var(--danger); cursor: pointer; font-family: 'Orbitron'; }
+        .btn-clear:hover { background: var(--danger); color: white; }
 
-        /* Style spécifique pour Mines et Dangers */
-        .icon-mine { color: var(--danger); font-size: 24px; font-weight: bold; text-shadow: 0 0 5px var(--danger); }
-        .icon-danger { color: var(--warning); font-size: 24px; font-weight: bold; text-shadow: 0 0 5px var(--warning); }
-
-        /* Popups */
-        .leaflet-popup-content-wrapper { background: var(--sidebar-bg); color: white; border: 1px solid var(--primary); border-radius: 2px; font-family: 'Roboto Mono';}
-        .leaflet-popup-tip { background: var(--primary); }
-        .popup-delete-btn { background: var(--danger); color: white; border: none; padding: 6px; width: 100%; cursor: pointer; margin-top: 10px; font-size: 10px; font-weight: bold; font-family: 'Roboto Mono';}
-
-        #toast {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background: var(--primary); color: black; padding: 8px 24px; border-radius: 4px;
-            font-weight: bold; font-size: 0.7rem; opacity: 0; transition: 0.4s; z-index: 2000; pointer-events: none;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        /* Instructions pour le dessin */
         #draw-instruction {
             position: absolute; bottom: 20px; left: 300px; background: rgba(0,0,0,0.8);
-            color: var(--primary); padding: 10px; border-radius: 4px; border: 1px solid var(--primary);
-            font-size: 12px; z-index: 1001; display: none; font-family: 'Roboto Mono';
+            color: var(--primary); padding: 10px; border: 1px solid var(--primary); z-index: 1000; display: none;
         }
     </style>
 </head>
@@ -86,248 +48,108 @@
 
 <div id="app-container">
     <div id="sidebar">
-        <div class="logo">ALTIS // HQ PRO</div>
+        <div class="logo">ALTIS // HQ</div>
         
-        <div class="section-title">Unités Troupes</div>
+        <div class="section-title">Unités</div>
         <div class="grid-types">
-            <div class="type-card active" onclick="setType('infantry', this)">
-                <img src="https://cdn-icons-png.flaticon.com/512/711/711769.png"> INF
-            </div>
-            <div class="type-card" onclick="setType('vehicle', this)">
-                <img src="https://cdn-icons-png.flaticon.com/512/2083/2083320.png"> VHC
-            </div>
-            <div class="type-card" onclick="setType('enemy', this)">
-                <img src="https://cdn-icons-png.flaticon.com/512/822/822143.png"> ENY
-            </div>
-            <div class="type-card" onclick="setType('objective', this)">
-                <img src="https://cdn-icons-png.flaticon.com/512/3551/3551525.png"> OBJ
-            </div>
+            <div class="type-card active" onclick="setType('infantry', this)"><img src="https://cdn-icons-png.flaticon.com/512/711/711769.png">INF</div>
+            <div class="type-card" onclick="setType('vehicle', this)"><img src="https://cdn-icons-png.flaticon.com/512/2083/2083320.png">VHC</div>
+            <div class="type-card" onclick="setType('enemy', this)"><img src="https://cdn-icons-png.flaticon.com/512/822/822143.png">ENY</div>
         </div>
 
-        <div class="section-title">Marqueurs Spéciaux</div>
+        <div class="section-title">Tactique</div>
         <div class="grid-types">
-            <div class="type-card" onclick="setType('mine', this)">
-                <div class="icon-placeholder icon-mine">✹</div> MINE
-            </div>
-            <div class="type-card" onclick="setType('danger', this)">
-                <div class="icon-placeholder icon-danger">⚠</div> DANGER
-            </div>
+            <div class="type-card" onclick="setType('mine', this)">✹ MINE</div>
+            <div class="type-card" onclick="setType('danger', this)">⚠ DANGER</div>
+            <div class="type-card" onclick="setType('arrow', this)">➔ FLÈCHE</div>
+            <div class="type-card" onclick="setType('zone', this)">⬢ ZONE</div>
         </div>
 
-        <div class="section-title">Outils Dessin</div>
-        <div class="grid-types">
-            <div class="type-card" onclick="setType('arrow', this)">
-                <div class="icon-placeholder">➔</div> FLÈCHE
-            </div>
-            <div class="type-card" onclick="setType('zone', this)">
-                <div class="icon-placeholder">⬢</div> ZONE
-            </div>
-        </div>
-
-        <div class="section-title">Système</div>
-        <button class="btn-action btn-clear" onclick="clearAllPings()">WIPE ALL DATA</button>
+        <button class="btn-clear" onclick="clearAll()">WIPE DATA</button>
     </div>
-
     <div id="map"></div>
 </div>
 
-<div id="toast">TRANSMISSION REÇUE</div>
 <div id="draw-instruction">Cliquez pour tracer. Double-cliquez pour terminer.</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.6.0/leaflet.polylinedecorator.min.js"></script>
 
 <script>
-    const imgW = 2048;
-    const imgH = 1512;
-    let currentType = 'infantry';
-    let isDrawing = false;
-    let drawPoints = [];
-    let tempGraphic = null; // Pour afficher le tracé en cours
+    const imgW = 2048, imgH = 1512;
+    let currentType = 'infantry', isDrawing = false, drawPoints = [], tempLayer = null;
 
-    const iconUrls = {
-        infantry: 'https://cdn-icons-png.flaticon.com/512/711/711769.png',
-        vehicle: 'https://cdn-icons-png.flaticon.com/512/2083/2083320.png',
-        enemy: 'https://cdn-icons-png.flaticon.com/512/822/822143.png',
-        objective: 'https://cdn-icons-png.flaticon.com/512/3551/3551525.png'
-    };
-
-    const map = L.map('map', { 
-        crs: L.CRS.Simple, 
-        minZoom: -2, 
-        maxZoom: 2,
-        zoomControl: false,
-        attributionControl: false 
-    });
-
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
-
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false });
     const imageBounds = [[0, 0], [imgH, imgW]];
-    const mapImg = L.imageOverlay('altis.webp', imageBounds).addTo(map);
+    L.imageOverlay('altis.webp', imageBounds).addTo(map);
     map.fitBounds(imageBounds);
-
-    // --- CONFIGURATION DES ICÔNES SPÉCIALES (DivIcon) ---
-
-    const mineIcon = L.divIcon({ className: 'icon-placeholder icon-mine', html: '✹', iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -10] });
-    const dangerIcon = L.divIcon({ className: 'icon-placeholder icon-danger', html: '⚠', iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -10] });
-
-    const getIcon = (type) => {
-        if (type === 'mine') return mineIcon;
-        if (type === 'danger') return dangerIcon;
-        return L.icon({ iconUrl: iconUrls[type], iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -10] });
-    };
-
-    // --- GESTION DES DESSINS (Flèches, Zones) ---
-
-    // Style pour les formes
-    const drawStyle = { color: var(--primary), weight: 3, opacity: 0.8, fillOpacity: 0.2, fillColor: var(--primary-dim) };
-    const dangerDrawStyle = { color: var(--danger), weight: 3, opacity: 0.8, fillOpacity: 0.3, fillColor: rgba(255, 62, 62, 0.2) };
-
-    function getShapeStyle(type) {
-        return (type === 'zone' && currentType === 'enemy') ? dangerDrawStyle : drawStyle;
-    }
-
-    // --- FONCTIONS SYSTÈME ---
-
-    function showToast(text) {
-        const t = document.getElementById('toast');
-        t.innerText = text; t.style.opacity = 1;
-        setTimeout(() => t.style.opacity = 0, 3000);
-    }
 
     function setType(type, el) {
         currentType = type;
         document.querySelectorAll('.type-card').forEach(c => c.classList.remove('active'));
         el.classList.add('active');
-        
-        // Reset dessin si on change d'outil
-        cancelDrawing();
-
-        const isShape = (type === 'arrow' || type === 'zone');
-        document.getElementById('draw-instruction').style.display = isShape ? 'block' : 'none';
+        isDrawing = false; drawPoints = [];
+        document.getElementById('draw-instruction').style.display = (type === 'arrow' || type === 'zone') ? 'block' : 'none';
     }
 
-    // Charger les éléments (Points et Formes)
     async function loadPings() {
-        try {
-            const res = await fetch('/pings');
-            const pings = await res.json();
+        const res = await fetch('/pings');
+        const data = await res.json();
+        map.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.Polyline || l instanceof L.Polygon || l instanceof L.PolylineDecorator) if(l.options.alt !== 'map') map.removeLayer(l); });
+
+        data.forEach(p => {
+            let layer;
+            const content = `<button onclick="deletePing(${p.id})" style="background:red;color:white;border:none;width:100%;cursor:pointer">EFFACER</button>`;
             
-            // Nettoyage complet (Marqueurs, Polylignes, Polygones)
-            map.eachLayer((layer) => { 
-                if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.PolylineDecorator) {
-                    if (layer !== mapImg) map.removeLayer(layer); 
+            if (p.points_json) {
+                const pts = JSON.parse(p.points_json);
+                if (p.type === 'zone') layer = L.polygon(pts, {color: '#00ff41'}).addTo(map);
+                else {
+                    layer = L.polyline(pts, {color: '#00ff41'}).addTo(map);
+                    L.polylineDecorator(layer, {patterns: [{offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 15, pathOptions: {color: '#00ff41'}})}]}).addTo(map);
                 }
-            });
-
-            pings.forEach(p => {
-                let graphic;
-                let popupContent = `
-                    <div style="min-width:140px; text-align:center;">
-                        <span style="color:var(--primary); font-size:10px; font-weight:bold;">// ${p.type.toUpperCase()}</span>
-                        ${p.label ? `<p style="margin:8px 0; font-size:12px; color:white;">${p.label}</p>` : ''}
-                        <button onclick="deletePing(${p.id})" class="popup-delete-btn">TERMINATE</button>
-                    </div>
-                `;
-
-                // Cas 1 : C'est un point simple
-                if (p.x !== null && p.y !== null) {
-                    graphic = L.marker([p.x, p.y], { icon: getIcon(p.type) }).addTo(map);
-                    graphic.bindPopup(popupContent);
-                } 
-                // Cas 2 : C'est une forme géométrique (JSON)
-                else if (p.points_json) {
-                    const points = JSON.parse(p.points_json);
-                    const style = getShapeStyle(p.type);
-
-                    if (p.type === 'zone') {
-                        graphic = L.polygon(points, style).addTo(map);
-                    } else if (p.type === 'arrow') {
-                        graphic = L.polyline(points, style).addTo(map);
-                        // Ajout de la flèche décorative au bout
-                        L.polylineDecorator(graphic, {
-                            patterns: [{ offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({ pixelSize: 15, polygon: false, pathOptions: {stroke: true, color: style.color} }) }]
-                        }).addTo(map);
-                    }
-                    
-                    if (graphic) graphic.bindPopup(popupContent);
-                }
-            });
-        } catch(e) { console.error("Sync error"); }
+            } else {
+                layer = L.marker([p.x, p.y]).addTo(map);
+            }
+            if(layer) layer.bindPopup(content);
+        });
     }
 
-    // Interaction au clic
-    map.on('click', function(e) {
-        // Mode Dessin (Flèche ou Zone)
+    map.on('click', e => {
         if (currentType === 'arrow' || currentType === 'zone') {
             isDrawing = true;
             drawPoints.push([e.latlng.lat, e.latlng.lng]);
-            
-            // Mise à jour du tracé temporaire
-            if (tempGraphic) map.removeLayer(tempGraphic);
-            
-            if (currentType === 'arrow') {
-                tempGraphic = L.polyline(drawPoints, drawStyle).addTo(map);
-            } else {
-                tempGraphic = L.polygon(drawPoints, drawStyle).addTo(map);
-            }
-        } 
-        // Mode Point simple (Unité, Mine, Danger)
-        else {
-            const label = prompt("IDENTIFICATION DU CONTACT (Optionnel) :");
-            if (label === null) return; // Annulé
-
-            savePing({ x: e.latlng.lat, y: e.latlng.lng, label: label, type: currentType });
+            if (tempLayer) map.removeLayer(tempLayer);
+            tempLayer = (currentType === 'arrow') ? L.polyline(drawPoints, {color: '#00ff41'}).addTo(map) : L.polygon(drawPoints, {color: '#00ff41'}).addTo(map);
+        } else {
+            const label = prompt("Nom :");
+            savePing({ x: e.latlng.lat, y: e.latlng.lng, type: currentType, label: label });
         }
     });
 
-    // Double-clic pour terminer le dessin
-    map.on('dblclick', function(e) {
-        if (isDrawing && drawPoints.length > 1) {
-            const type = currentType;
-            const points = [...drawPoints]; // Copie
-            cancelDrawing(); // Reset interface
-            
-            savePing({ type: type, points_json: JSON.stringify(points), label: (type === 'zone' ? 'ZONE DÉLIMITÉE' : 'AXE DE MOUVEMENT') });
+    map.on('dblclick', () => {
+        if (isDrawing) {
+            savePing({ type: currentType, points_json: JSON.stringify(drawPoints) });
+            isDrawing = false; drawPoints = []; if(tempLayer) map.removeLayer(tempLayer);
         }
     });
 
-    // Annuler le dessin en cours
-    function cancelDrawing() {
-        isDrawing = false;
-        drawPoints = [];
-        if (tempGraphic) map.removeLayer(tempGraphic);
-        tempGraphic = null;
-    }
-
-    // Sauvegarder dans la DB Cloudflare
-    async function savePing(data) {
-        await fetch('/pings', {
-            method: 'POST',
-            body: JSON.stringify(data),
-            headers: { 'Content-Type': 'application/json' }
-        });
-        showToast("TRANSMISSION REÇUE");
+    async function savePing(obj) {
+        await fetch('/pings', { method: 'POST', body: JSON.stringify(obj) });
         loadPings();
     }
 
     async function deletePing(id) {
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
-        showToast("CIBLE ÉLIMINÉE");
         loadPings();
     }
 
-    async function clearAllPings() {
-        if(confirm("ATTENTION : EFFACER TOUTES LES DONNÉES TACTIQUES ?")) {
-            await fetch('/pings?id=all', { method: 'DELETE' });
-            showToast("CARTE RÉINITIALISÉE");
-            loadPings();
-        }
+    async function clearAll() {
+        if(confirm("Tout effacer ?")) { await fetch('/pings?id=all', { method: 'DELETE' }); loadPings(); }
     }
 
-    // Refresh auto
-    setInterval(loadPings, 5000);
     loadPings();
+    setInterval(loadPings, 5000);
 </script>
 </body>
 </html>
