@@ -6,45 +6,65 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
-            --primary: #00ff41; /* Vert Matrix/Tactique */
+            --primary: #00ff41;
             --bg: #0a0a0a;
-            --panel: rgba(20, 20, 20, 0.9);
+            --danger: #ff4444;
+            --panel: rgba(15, 15, 15, 0.95);
         }
-        body { margin: 0; background: var(--bg); color: var(--primary); font-family: 'Courier New', monospace; overflow: hidden; }
+        body { margin: 0; background: var(--bg); color: var(--primary); font-family: 'Courier New', monospace; }
         #map { height: 100vh; width: 100vw; background: #050505; }
 
-        /* Panneau de sélection */
+        /* Panneau de contrôle */
         #ui-panel {
             position: absolute; top: 20px; right: 20px; z-index: 1000;
-            background: var(--panel); padding: 15px; border: 2px solid var(--primary);
-            border-radius: 4px; box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
-            width: 200px;
+            background: var(--panel); padding: 20px; border: 2px solid var(--primary);
+            border-radius: 5px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+            width: 220px;
         }
-        h3 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid var(--primary); }
+        h3 { margin: 0 0 15px 0; font-size: 14px; text-align: center; border-bottom: 1px solid var(--primary); padding-bottom: 5px; }
+        
         .type-btn {
-            display: block; width: 100%; padding: 8px; margin-bottom: 5px;
-            background: transparent; border: 1px solid #444; color: #aaa;
-            cursor: pointer; text-align: left; transition: 0.3s;
+            display: flex; align-items: center; width: 100%; padding: 10px; margin-bottom: 8px;
+            background: rgba(255,255,255,0.05); border: 1px solid #333; color: #fff;
+            cursor: pointer; font-family: 'Courier New', monospace; transition: 0.2s;
         }
-        .type-btn:hover { border-color: var(--primary); color: white; }
-        .type-btn.active { background: var(--primary); color: black; font-weight: bold; }
+        .type-btn img { width: 20px; margin-right: 10px; filter: invert(1); }
+        .type-btn:hover { border-color: var(--primary); background: rgba(0, 255, 65, 0.1); }
+        .type-btn.active { border-color: var(--primary); background: rgba(0, 255, 65, 0.2); box-shadow: inset 0 0 10px var(--primary); }
 
-        /* Bouton supprimer dans le popup */
-        .delete-btn {
-            background: #ff4444; color: white; border: none; padding: 5px 10px;
-            cursor: pointer; border-radius: 3px; margin-top: 10px; width: 100%;
+        .clear-btn {
+            margin-top: 20px; width: 100%; padding: 10px; background: transparent;
+            border: 1px solid var(--danger); color: var(--danger); cursor: pointer;
+            font-weight: bold; font-family: 'Courier New', monospace;
         }
+        .clear-btn:hover { background: var(--danger); color: white; }
+
+        /* Style des Popups */
+        .leaflet-popup-content-wrapper { background: var(--panel); color: white; border: 1px solid var(--primary); }
+        .delete-single-btn { background: var(--danger); color: white; border: none; padding: 5px; width: 100%; cursor: pointer; margin-top: 10px; }
+        
+        /* Effet sur les icônes de map */
+        .leaflet-marker-icon { filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
     </style>
 </head>
 <body>
 
 <div id="ui-panel">
-    <h3>Sélection Unité</h3>
-    <button class="type-btn active" onclick="setType('infantry', this)">👤 INFANTERIE</button>
-    <button class="type-btn" onclick="setType('vehicle', this)">🚜 VÉHICULE</button>
-    <button class="type-btn" onclick="setType('enemy', this)">⚠️ ENNEMI</button>
-    <button class="type-btn" onclick="setType('objective', this)">🎯 OBJECTIF</button>
-    <p style="font-size: 10px; color: #666; margin-top: 10px;">CLIQUEZ SUR LA CARTE POUR PLACER</p>
+    <h3>UNITÉ TACTIQUE</h3>
+    <button class="type-btn active" onclick="setType('infantry', this)">
+        <img src="https://cdn-icons-png.flaticon.com/512/711/711769.png"> INFANTERIE
+    </button>
+    <button class="type-btn" onclick="setType('vehicle', this)">
+        <img src="https://cdn-icons-png.flaticon.com/512/2083/2083320.png"> VÉHICULE
+    </button>
+    <button class="type-btn" onclick="setType('enemy', this)">
+        <img src="https://cdn-icons-png.flaticon.com/512/822/822143.png"> ENNEMI
+    </button>
+    <button class="type-btn" onclick="setType('objective', this)">
+        <img src="https://cdn-icons-png.flaticon.com/512/3551/3551525.png"> OBJECTIF
+    </button>
+
+    <button class="clear-btn" onclick="clearAllPings()">✖ EFFACER TOUT</button>
 </div>
 
 <div id="map"></div>
@@ -52,9 +72,14 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     let currentType = 'infantry';
+    const iconUrls = {
+        infantry: 'https://cdn-icons-png.flaticon.com/512/711/711769.png',
+        vehicle: 'https://cdn-icons-png.flaticon.com/512/2083/2083320.png',
+        enemy: 'https://cdn-icons-png.flaticon.com/512/822/822143.png',
+        objective: 'https://cdn-icons-png.flaticon.com/512/3551/3551525.png'
+    };
+
     const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2 });
-    
-    // Configuration de la carte (Image Arma 3 Altis)
     const imageBounds = [[0, 0], [1000, 1000]];
     L.imageOverlay('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Altis_map_Arma_3.png/800px-Altis_map_Arma_3.png', imageBounds).addTo(map);
     map.fitBounds(imageBounds);
@@ -65,25 +90,17 @@
         btn.classList.add('active');
     }
 
-    // Icônes personnalisées simplifiées (On utilise des couleurs)
-    const getIcon = (type) => {
-        let color = "blue";
-        if(type === 'enemy') color = "red";
-        if(type === 'objective') color = "gold";
-        if(type === 'vehicle') color = "green";
-        
-        return L.divIcon({
-            className: 'custom-div-icon',
-            html: `<div style="background-color:${color}; width:12px; height:12px; border:2px solid white; border-radius:50%;"></div>`,
-            iconSize: [15, 15]
-        });
-    };
+    const getIcon = (type) => L.icon({
+        iconUrl: iconUrls[type],
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15]
+    });
 
     async function loadPings() {
         const response = await fetch('/pings');
         const pings = await response.json();
         
-        // Supprimer les anciens marqueurs de l'affichage avant de recharger
         map.eachLayer((layer) => {
             if (layer instanceof L.Marker) map.removeLayer(layer);
         });
@@ -91,15 +108,17 @@
         pings.forEach(p => {
             const marker = L.marker([p.x, p.y], { icon: getIcon(p.type) }).addTo(map);
             marker.bindPopup(`
-                <b>TYPE: ${p.type.toUpperCase()}</b><br>
-                LABEL: ${p.label}<br>
-                <button class="delete-btn" onclick="deletePing(${p.id})">SUPPRIMER</button>
+                <div style="text-align:center">
+                    <b style="color:var(--primary)">${p.type.toUpperCase()}</b><br>
+                    <span style="color:white">${p.label}</span><br>
+                    <button class="delete-single-btn" onclick="deletePing(${p.id})">EFFACER</button>
+                </div>
             `);
         });
     }
 
     map.on('click', async function(e) {
-        const label = prompt("Identification du contact :");
+        const label = prompt("Description du contact :");
         if (!label) return;
 
         await fetch('/pings', {
@@ -111,13 +130,18 @@
     });
 
     async function deletePing(id) {
-        if(confirm("Confirmer la suppression ?")) {
-            await fetch(`/pings?id=${id}`, { method: 'DELETE' });
+        await fetch(`/pings?id=${id}`, { method: 'DELETE' });
+        loadPings();
+    }
+
+    async function clearAllPings() {
+        if (confirm("Voulez-vous vraiment effacer TOUS les points de la carte ?")) {
+            await fetch('/pings?id=all', { method: 'DELETE' });
             loadPings();
         }
     }
 
-    // Refresh auto
+    // Rafraîchissement automatique toutes les 5 secondes
     setInterval(loadPings, 5000);
     loadPings();
 </script>
