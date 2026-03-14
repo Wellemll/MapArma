@@ -2,66 +2,124 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arma 3 Tactical Map</title>
-    
+    <title>Tactical Map - Operation ti-witech</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
     <style>
-        body { margin: 0; padding: 0; background: #1a1a1a; color: white; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; background: #0b0b0b; }
-        .menu-top { position: absolute; top: 10px; left: 50px; z-index: 1000; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; border: 1px solid #444; }
+        :root {
+            --primary: #00ff41; /* Vert Matrix/Tactique */
+            --bg: #0a0a0a;
+            --panel: rgba(20, 20, 20, 0.9);
+        }
+        body { margin: 0; background: var(--bg); color: var(--primary); font-family: 'Courier New', monospace; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; background: #050505; }
+
+        /* Panneau de sélection */
+        #ui-panel {
+            position: absolute; top: 20px; right: 20px; z-index: 1000;
+            background: var(--panel); padding: 15px; border: 2px solid var(--primary);
+            border-radius: 4px; box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+            width: 200px;
+        }
+        h3 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid var(--primary); }
+        .type-btn {
+            display: block; width: 100%; padding: 8px; margin-bottom: 5px;
+            background: transparent; border: 1px solid #444; color: #aaa;
+            cursor: pointer; text-align: left; transition: 0.3s;
+        }
+        .type-btn:hover { border-color: var(--primary); color: white; }
+        .type-btn.active { background: var(--primary); color: black; font-weight: bold; }
+
+        /* Bouton supprimer dans le popup */
+        .delete-btn {
+            background: #ff4444; color: white; border: none; padding: 5px 10px;
+            cursor: pointer; border-radius: 3px; margin-top: 10px; width: 100%;
+        }
     </style>
 </head>
 <body>
 
-    <div class="menu-top">
-        <b>Tactical Map v1.0</b> | Cliquez sur la carte pour placer un point.
-    </div>
+<div id="ui-panel">
+    <h3>Sélection Unité</h3>
+    <button class="type-btn active" onclick="setType('infantry', this)">👤 INFANTERIE</button>
+    <button class="type-btn" onclick="setType('vehicle', this)">🚜 VÉHICULE</button>
+    <button class="type-btn" onclick="setType('enemy', this)">⚠️ ENNEMI</button>
+    <button class="type-btn" onclick="setType('objective', this)">🎯 OBJECTIF</button>
+    <p style="font-size: 10px; color: #666; margin-top: 10px;">CLIQUEZ SUR LA CARTE POUR PLACER</p>
+</div>
 
-    <div id="map"></div>
+<div id="map"></div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <script>
-  const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2 });
-const mapImageUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Altis_map_Arma_3.png/800px-Altis_map_Arma_3.png';
-const imageBounds = [[0, 0], [1000, 1000]];
-L.imageOverlay(mapImageUrl, imageBounds).addTo(map);
-map.fitBounds(imageBounds);
-
-// --- FONCTION : Charger les points depuis Cloudflare ---
-async function loadPings() {
-    const response = await fetch('/pings');
-    const pings = await response.json();
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let currentType = 'infantry';
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2 });
     
-    // On nettoie les anciens marqueurs et on affiche les nouveaux
-    pings.forEach(p => {
-        L.marker([p.x, p.y]).addTo(map)
-         .bindPopup(`<b>${p.label}</b><br>Posté le: ${p.timestamp}`);
-    });
-}
+    // Configuration de la carte (Image Arma 3 Altis)
+    const imageBounds = [[0, 0], [1000, 1000]];
+    L.imageOverlay('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Altis_map_Arma_3.png/800px-Altis_map_Arma_3.png', imageBounds).addTo(map);
+    map.fitBounds(imageBounds);
 
-// --- INTERACTION : Envoyer un point au clic ---
-map.on('click', async function(e) {
-    const { lat, lng } = e.latlng;
-    const label = prompt("Nom du point (ex: Ennemi, Loot, Base) :");
-    
-    if (label) {
+    function setType(type, btn) {
+        currentType = type;
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    // Icônes personnalisées simplifiées (On utilise des couleurs)
+    const getIcon = (type) => {
+        let color = "blue";
+        if(type === 'enemy') color = "red";
+        if(type === 'objective') color = "gold";
+        if(type === 'vehicle') color = "green";
+        
+        return L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div style="background-color:${color}; width:12px; height:12px; border:2px solid white; border-radius:50%;"></div>`,
+            iconSize: [15, 15]
+        });
+    };
+
+    async function loadPings() {
+        const response = await fetch('/pings');
+        const pings = await response.json();
+        
+        // Supprimer les anciens marqueurs de l'affichage avant de recharger
+        map.eachLayer((layer) => {
+            if (layer instanceof L.Marker) map.removeLayer(layer);
+        });
+
+        pings.forEach(p => {
+            const marker = L.marker([p.x, p.y], { icon: getIcon(p.type) }).addTo(map);
+            marker.bindPopup(`
+                <b>TYPE: ${p.type.toUpperCase()}</b><br>
+                LABEL: ${p.label}<br>
+                <button class="delete-btn" onclick="deletePing(${p.id})">SUPPRIMER</button>
+            `);
+        });
+    }
+
+    map.on('click', async function(e) {
+        const label = prompt("Identification du contact :");
+        if (!label) return;
+
         await fetch('/pings', {
             method: 'POST',
-            body: JSON.stringify({ x: lat, y: lng, label: label }),
+            body: JSON.stringify({ x: e.latlng.lat, y: e.latlng.lng, label: label, type: currentType }),
             headers: { 'Content-Type': 'application/json' }
         });
-        loadPings(); // Rafraîchir la carte après l'envoi
+        loadPings();
+    });
+
+    async function deletePing(id) {
+        if(confirm("Confirmer la suppression ?")) {
+            await fetch(`/pings?id=${id}`, { method: 'DELETE' });
+            loadPings();
+        }
     }
-});
 
-// Charger les points au démarrage
-loadPings();
-
-// Optionnel : Rafraîchir automatiquement toutes les 10 secondes
-setInterval(loadPings, 10000);
-    </script>
+    // Refresh auto
+    setInterval(loadPings, 5000);
+    loadPings();
+</script>
 </body>
 </html>
