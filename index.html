@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL</title>
+    <title>ALTIS COMMAND TERMINAL | NATO STD</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -39,20 +39,20 @@
         .icon-btn.active { border-color: var(--blue); background: rgba(0, 210, 255, 0.1); }
         .icon-btn.active span { color: white; }
 
-        /* Utilitaires */
-        .btn-util { width: 100%; padding: 10px; margin-bottom: 4px; border: 1px solid #2a3544; background: rgba(255,255,255,0.02); color: #8892b0; cursor: pointer; font-size: 0.7rem; border-radius: 4px; text-align: left; }
-        .btn-util.active { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
-
+        /* Palette de couleurs */
         .color-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
         .color-dot { height: 25px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; }
         .color-dot.active { border-color: white; transform: scale(1.1); }
+
+        /* Utilitaires */
+        .btn-util { width: 100%; padding: 10px; margin-bottom: 4px; border: 1px solid #2a3544; background: rgba(255,255,255,0.02); color: #8892b0; cursor: pointer; font-size: 0.7rem; border-radius: 4px; text-align: left; }
+        .btn-util.active { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
 
         #map { flex-grow: 1; background: #000; cursor: crosshair; }
         .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; pointer-events: none; }
         
         .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; font-size: 14px; white-space: nowrap; }
         .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 8px; cursor: pointer; font-size: 0.6rem; opacity: 0.5; }
-        .clear-all:hover { opacity: 1; background: var(--red); color: white; }
     </style>
 </head>
 <body>
@@ -61,16 +61,19 @@
     <div id="sidebar">
         <div class="header">ALTIS COM</div>
         
-        <div class="section-label">1. Mode de travail</div>
+        <div class="section-label">MODE OPÉRATOIRE</div>
         <div class="mode-selector">
             <button id="btn-add" class="mode-btn active" onclick="setInterMode('ADD')">AJOUTER</button>
             <button id="btn-del" class="mode-btn mode-del" onclick="setInterMode('DEL')">SUPPRIMER</button>
         </div>
 
-        <div class="section-label">2. Sélectionner Unité</div>
+        <div class="section-label">ICÔNES TACTIQUES</div>
         <div class="grid-icons">
-            <button class="icon-btn active" onclick="setType('unit', this)">
-                <div style="font-size: 20px;">•</div><span>POINT BASE</span>
+            <button class="icon-btn active" onclick="setType('Infantry', this)">
+                <img src="Icons/Infantry.png"><span>INFANTERIE</span>
+            </button>
+            <button class="icon-btn" onclick="setType('Vehicule', this)">
+                <img src="Icons/Vehicule.png"><span>VHC LÉGER</span>
             </button>
             <button class="icon-btn" onclick="setType('HeavyArmor', this)">
                 <img src="Icons/HeavyArmor.png"><span>BLINDÉ LOURD</span>
@@ -89,7 +92,7 @@
             </button>
         </div>
 
-        <div class="section-label">3. Couleur (Tracés / Unités)</div>
+        <div class="section-label">COULEUR (TRACÉS / UNITES)</div>
         <div class="color-picker">
             <div class="color-dot active" style="background: var(--primary);" onclick="setColor('#00ff41', this)"></div>
             <div class="color-dot" style="background: var(--blue);" onclick="setColor('#00d2ff', this)"></div>
@@ -98,16 +101,16 @@
             <div class="color-dot" style="background: #ffffff;" onclick="setColor('#ffffff', this)"></div>
         </div>
 
-        <div class="section-label">4. Outils Spéciaux</div>
+        <div class="section-label">OUTILS SPÉCIAUX</div>
         <button class="btn-util" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
         <button class="btn-util" onclick="setType('zone', this)">⬢ ZONE (3 CLICS)</button>
         <button class="btn-util" onclick="setType('text', this)">📝 TEXTE TACTIQUE</button>
 
-        <button class="clear-all" onclick="clearAll()">WIPE ALL DATA</button>
+        <button class="clear-all" onclick="clearAll()">WIPE TERMINAL</button>
     </div>
     
     <div id="map"></div>
-    <div class="status-bar" id="status">TERMINAL PRÊT</div>
+    <div class="status-bar" id="status">SYSTÈME PRÊT</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -116,13 +119,15 @@
     L.imageOverlay('altis.webp', [[0, 0], [1512, 2048]]).addTo(map);
     map.fitBounds([[0, 0], [1512, 2048]]);
 
-    let interMode = 'ADD'; // ADD ou DEL
-    let currentType = 'unit';
+    let interMode = 'ADD';
+    let currentType = 'Infantry';
     let currentColor = '#00ff41';
     let pointsBuffer = [];
 
-    // Chemins vers ton dossier Icons/
+    // Configuration des chemins vers ton dossier Icons/
     const iconFiles = {
+        'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
+        'Vehicule': { blue: 'Icons/Vehicule.png', red: 'Icons/Vehicule2.png' },
         'HeavyArmor': { blue: 'Icons/HeavyArmor.png', red: 'Icons/HeavyArmor2.png' },
         'Armourwheeled': { blue: 'Icons/Armourwheeled.png', red: 'Icons/Armourwheeled2.png' },
         'Artillery': { blue: 'Icons/Artillery.png', red: 'Icons/Artillery2.png' },
@@ -134,8 +139,7 @@
         interMode = m;
         document.getElementById('btn-add').classList.toggle('active', m === 'ADD');
         document.getElementById('btn-del').classList.toggle('active', m === 'DEL');
-        updateStatus(`MODE : ${m}`);
-        load(); // On recharge pour activer/désactiver la suppression
+        load();
     }
 
     function setColor(c, el) {
@@ -209,7 +213,7 @@
 
     async function save(obj) { await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) }); load(); }
     async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
-    async function clearAll() { if(confirm("WIPE TOTAL DE LA CARTE ?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
+    async function clearAll() { if(confirm("EFFACER TOUTE LA CARTE ?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
 
     load();
     setInterval(load, 4000);
