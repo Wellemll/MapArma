@@ -20,9 +20,10 @@
         .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,255,65,0.3); }
         .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
         
-        .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
-        .mode-btn { padding: 10px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.7rem; font-weight: bold; border-radius: 4px; transition: 0.2s; }
+        .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
+        .mode-btn { padding: 10px 2px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.6rem; font-weight: bold; border-radius: 4px; transition: 0.2s; text-align: center; }
         .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); }
+        .mode-btn#btn-edit.active { border-color: var(--blue); color: var(--blue); background: rgba(0, 210, 255, 0.1); }
         .mode-btn.mode-del.active { border-color: var(--red); color: var(--red); background: rgba(255, 62, 62, 0.1); }
 
         .grid-icons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
@@ -62,7 +63,8 @@
         
         <div class="section-label">MODE OPÉRATOIRE</div>
         <div class="mode-selector">
-            <button id="btn-add" class="mode-btn active" onclick="setInterMode('ADD')">AJOUTER/EDIT</button>
+            <button id="btn-add" class="mode-btn active" onclick="setInterMode('ADD')">AJOUTER</button>
+            <button id="btn-edit" class="mode-btn" onclick="setInterMode('EDIT')">ÉDITER</button>
             <button id="btn-del" class="mode-btn mode-del" onclick="setInterMode('DEL')">SUPPRIMER</button>
         </div>
 
@@ -103,6 +105,8 @@
         <div class="section-label">OUTILS SPÉCIAUX</div>
         <button class="btn-util" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
         <button class="btn-util" onclick="setType('zone', this)">⬢ ZONE (3 CLICS)</button>
+        <button class="btn-util" onclick="setType('zone4', this)">⬢ ZONE (4 CLICS)</button>
+        <button class="btn-util" onclick="setType('circle', this)">◯ CERCLE (2 CLICS)</button>
         <button class="btn-util" onclick="setType('text', this)">📝 TEXTE TACTIQUE</button>
 
         <button class="clear-all" onclick="clearAll()">WIPE TERMINAL</button>
@@ -145,8 +149,10 @@
     function setInterMode(m) {
         interMode = m;
         document.getElementById('btn-add').classList.toggle('active', m === 'ADD');
+        document.getElementById('btn-edit').classList.toggle('active', m === 'EDIT');
         document.getElementById('btn-del').classList.toggle('active', m === 'DEL');
         load();
+        updateStatus(`MODE : ${m}`);
     }
 
     function setColor(c, el) {
@@ -169,7 +175,7 @@
     async function load() {
         const res = await fetch('/pings');
         const data = await res.json();
-        map.eachLayer(l => { if ((l instanceof L.Marker || l instanceof L.CircleMarker || l instanceof L.Polyline || l instanceof L.Polygon) && !l._url) map.removeLayer(l); });
+        map.eachLayer(l => { if ((l instanceof L.Marker || l instanceof L.CircleMarker || l instanceof L.Polyline || l instanceof L.Polygon || l instanceof L.Circle) && !l._url) map.removeLayer(l); });
 
         data.forEach(p => {
             const parts = p.label ? p.label.split('|') : [];
@@ -182,41 +188,33 @@
                 layer = L.marker([p.x, p.y], {
                     icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${parts[2] || 'TEXTE'}</span>` })
                 });
+            } else if (p.type === 'circle') {
+                const pts = JSON.parse(p.points_json);
+                const radius = Math.sqrt(Math.pow(pts[1][0] - pts[0][0], 2) + Math.pow(pts[1][1] - pts[0][1], 2));
+                layer = L.circle(pts[0], { radius: radius, color: color, fillOpacity: 0.3 });
             } else if (p.points_json) {
                 const pts = JSON.parse(p.points_json);
-                layer = (p.type === 'zone') ? L.polygon(pts, {color: color, fillOpacity: 0.3}) : L.polyline(pts, {color: color, weight: 4});
+                layer = (p.type.startsWith('zone')) ? L.polygon(pts, {color: color, fillOpacity: 0.3}) : L.polyline(pts, {color: color, weight: 4});
             } else if (p.type === 'Dot') {
-                layer = L.circleMarker([p.x, p.y], {
-                    radius: size / 6,
-                    color: color,
-                    fillColor: color,
-                    fillOpacity: 1,
-                    weight: 2
-                });
+                layer = L.circleMarker([p.x, p.y], { radius: size / 6, color: color, fillColor: color, fillOpacity: 1, weight: 2 });
             } else if (iconFiles[p.type]) {
                 const isRed = (color === '#ff3e3e');
                 let imgPath = iconFiles[p.type].any ? iconFiles[p.type].any : (isRed ? iconFiles[p.type].red : iconFiles[p.type].blue);
-                
                 layer = L.marker([p.x, p.y], {
-                    icon: L.icon({ 
-                        iconUrl: imgPath, 
-                        iconSize: [size, (size * 0.75)],
-                        iconAnchor: [(size/2), (size*0.75/2)] 
-                    })
+                    icon: L.icon({ iconUrl: imgPath, iconSize: [size, (size * 0.75)], iconAnchor: [(size/2), (size*0.75/2)] })
                 });
-            } else {
-                layer = L.circleMarker([p.x, p.y], {radius: 7, color: color, fillOpacity: 0.9, fillColor: color});
             }
 
-            layer.on('click', (e) => { 
-                L.DomEvent.stopPropagation(e); 
-                if (interMode === 'DEL') {
-                    del(p.id); 
-                } else if (interMode === 'ADD' && !p.points_json) {
-                    updateExisting(p.id, p.x, p.y, p.type);
-                }
-            });
-
+            if (interMode === 'ADD') {
+                layer.options.interactive = false;
+            } else {
+                layer.options.interactive = true;
+                layer.on('click', (e) => { 
+                    L.DomEvent.stopPropagation(e); 
+                    if (interMode === 'DEL') del(p.id); 
+                    else if (interMode === 'EDIT' && !p.points_json) updateExisting(p.id, p.x, p.y, p.type);
+                });
+            }
             layer.addTo(map);
         });
     }
@@ -228,12 +226,14 @@
         if (currentType === 'text') {
             const txt = prompt("Entrez votre texte :");
             if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${txt}` });
-        } else if (currentType === 'arrow' || currentType === 'zone') {
+        } else if (['arrow', 'zone', 'zone4', 'circle'].includes(currentType)) {
             pointsBuffer.push(pos);
-            const limit = currentType === 'arrow' ? 2 : 3;
+            let limit = (currentType === 'zone') ? 3 : (currentType === 'zone4' ? 4 : 2);
             if (pointsBuffer.length === limit) {
                 save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` });
                 pointsBuffer = [];
+            } else {
+                updateStatus(`CLIC ${pointsBuffer.length}/${limit}...`);
             }
         } else {
             save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` });
