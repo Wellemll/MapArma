@@ -31,11 +31,12 @@
             border-radius: 4px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center;
         }
         .icon-btn img { width: 30px; height: auto; margin-bottom: 5px; pointer-events: none; }
+        .icon-btn .dot-preview { width: 12px; height: 12px; border-radius: 50%; background: white; margin: 10px 0 13px; }
         .icon-btn span { font-size: 0.55rem; color: #8892b0; text-align: center; font-weight: bold; }
         .icon-btn.active { border-color: var(--blue); background: rgba(0, 210, 255, 0.1); }
         .icon-btn.active span { color: white; }
 
-        .color-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
+        .color-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 10px; }
         .color-dot { height: 25px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; }
         .color-dot.active { border-color: white; transform: scale(1.1); }
 
@@ -72,6 +73,7 @@
             <button class="icon-btn" onclick="setType('HeavyArmor', this)"><img src="Icons/HeavyArmor.png"><span>BLINDÉ LOURD</span></button>
             <button class="icon-btn" onclick="setType('Attackhelicopter', this)"><img src="Icons/Attackhelicopter.png"><span>HÉLICO ATT.</span></button>
             <button class="icon-btn" onclick="setType('Dead', this)"><img src="Icons/Dead.png"><span>DANGER / KIA</span></button>
+            <button class="icon-btn" onclick="setType('Dot', this)"><div class="dot-preview"></div><span>POINT TACT.</span></button>
         </div>
 
         <div class="section-label">SUPPORT & MINES</div>
@@ -95,6 +97,7 @@
             <div class="color-dot" style="background: var(--red);" onclick="setColor('#ff3e3e', this)"></div>
             <div class="color-dot" style="background: var(--orange);" onclick="setColor('#ff9d00', this)"></div>
             <div class="color-dot" style="background: #ffffff;" onclick="setColor('#ffffff', this)"></div>
+            <div class="color-dot" style="background: #000000; border: 1px solid #333;" onclick="setColor('#000000', this)"></div>
         </div>
 
         <div class="section-label">OUTILS SPÉCIAUX</div>
@@ -130,7 +133,8 @@
         'Airdefense': { blue: 'Icons/Airdefense.png', red: 'Icons/Airdefense2.png' },
         'Attackhelicopter': { blue: 'Icons/Attackhelicopter.png', red: 'Icons/Attackhelicopter2.png' },
         'Mine': { blue: 'Icons/Mine.png', red: 'Icons/Mine2.png' },
-        'Dead': { any: 'Icons/Dead.png' }
+        'Dead': { any: 'Icons/Dead.png' },
+        'Dot': { isVector: true }
     };
 
     function updateSizePreview(val) {
@@ -181,6 +185,14 @@
             } else if (p.points_json) {
                 const pts = JSON.parse(p.points_json);
                 layer = (p.type === 'zone') ? L.polygon(pts, {color: color, fillOpacity: 0.3}) : L.polyline(pts, {color: color, weight: 4});
+            } else if (p.type === 'Dot') {
+                layer = L.circleMarker([p.x, p.y], {
+                    radius: size / 6,
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 1,
+                    weight: 2
+                });
             } else if (iconFiles[p.type]) {
                 const isRed = (color === '#ff3e3e');
                 let imgPath = iconFiles[p.type].any ? iconFiles[p.type].any : (isRed ? iconFiles[p.type].red : iconFiles[p.type].blue);
@@ -196,13 +208,11 @@
                 layer = L.circleMarker([p.x, p.y], {radius: 7, color: color, fillOpacity: 0.9, fillColor: color});
             }
 
-            // GESTION INTELLIGENTE DES CLICS SUR LES OBJETS
             layer.on('click', (e) => { 
                 L.DomEvent.stopPropagation(e); 
                 if (interMode === 'DEL') {
                     del(p.id); 
                 } else if (interMode === 'ADD' && !p.points_json) {
-                    // MODE EDIT : Si on clique sur une unité en mode ADD, on la met à jour
                     updateExisting(p.id, p.x, p.y, p.type);
                 }
             });
@@ -232,7 +242,6 @@
 
     async function updateExisting(id, x, y, type) {
         updateStatus("MISE À JOUR UNITÉ...");
-        // On supprime l'ancienne et on repose la nouvelle avec les réglages actuels
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
         await save({ x: x, y: y, type: type, label: `${currentColor}|${currentSize}` });
     }
