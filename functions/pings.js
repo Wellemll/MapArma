@@ -13,11 +13,13 @@ export async function onRequest(context) {
     }
 
     if (request.method === "POST") {
-        const data = await request.json();
-        await env.DB.prepare("INSERT INTO pings (x, y, label, type, points_json) VALUES (?, ?, ?, ?, ?)")
-            .bind(data.x || null, data.y || null, data.label || '', data.type, data.points_json || null)
-            .run();
-        return new Response("OK", { status: 201 });
+        try {
+            const data = await request.json();
+            await env.DB.prepare("INSERT INTO pings (x, y, label, type, points_json) VALUES (?, ?, ?, ?, ?)")
+                .bind(data.x || null, data.y || null, data.label || '', data.type, data.points_json || null)
+                .run();
+            return new Response("OK", { status: 201 });
+        } catch (e) { return new Response(e.message, { status: 500 }); }
     }
 
     const { results } = await env.DB.prepare("SELECT * FROM pings").all();
