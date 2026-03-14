@@ -4,37 +4,18 @@ export async function onRequest(context) {
 
     if (request.method === "DELETE") {
         const id = url.searchParams.get("id");
-        if (id === "all") {
-            await env.DB.prepare("DELETE FROM pings").run();
-        } else {
-            await env.DB.prepare("DELETE FROM pings WHERE id = ?").bind(id).run();
-        }
-        return new Response("OK", { status: 200 });
+        id === "all" ? await env.DB.prepare("DELETE FROM pings").run() : await env.DB.prepare("DELETE FROM pings WHERE id = ?").bind(id).run();
+        return new Response("OK");
     }
 
     if (request.method === "POST") {
-        try {
-            const data = await request.json();
-            // On s'assure que chaque valeur est soit présente, soit NULL
-            const x = data.x ?? null;
-            const y = data.y ?? null;
-            const label = data.label ?? "";
-            const type = data.type ?? "inf_blue";
-            const points = data.points_json ?? null;
-
-            await env.DB.prepare("INSERT INTO pings (x, y, label, type, points_json) VALUES (?, ?, ?, ?, ?)")
-                .bind(x, y, label, type, points)
-                .run();
-                
-            return new Response("OK", { status: 201 });
-        } catch (e) {
-            return new Response(e.message, { status: 500 });
-        }
+        const data = await request.json();
+        await env.DB.prepare("INSERT INTO pings (x, y, label, type, points_json) VALUES (?, ?, ?, ?, ?)")
+            .bind(data.x || 0, data.y || 0, data.label || "", data.type, data.points_json || null)
+            .run();
+        return new Response("OK");
     }
 
-    // Récupération
     const { results } = await env.DB.prepare("SELECT * FROM pings").all();
-    return new Response(JSON.stringify(results), { 
-        headers: { "Content-Type": "application/json" } 
-    });
+    return new Response(JSON.stringify(results));
 }
