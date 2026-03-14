@@ -2,50 +2,32 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>SITREP TERMINAL | ALTIS</title>
+    <title>SITREP TERMINAL | COLORS</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { 
-            --primary: #00ff41; --blue: #00d2ff; --red: #ff3e3e; --bg: #05070a; 
-            --panel: rgba(13, 17, 23, 0.95);
+            --primary: #00ff41; --blue: #00d2ff; --red: #ff3e3e; --orange: #ff9d00; --black: #111; --bg: #05070a; 
         }
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: 'JetBrains Mono', monospace; color: white; overflow: hidden; }
-        
         #app { display: flex; height: 100vh; }
+        #sidebar { width: 260px; background: rgba(13, 17, 23, 0.95); border-right: 1px solid #1a222d; padding: 20px; display: flex; flex-direction: column; z-index: 1001; }
+        .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 20px; letter-spacing: 2px; }
+        .section-label { font-size: 0.65rem; color: #555; text-transform: uppercase; margin: 15px 0 8px; font-weight: bold; }
         
-        /* Sidebar Stylisée */
-        #sidebar { 
-            width: 260px; background: var(--panel); border-right: 1px solid #1a222d; 
-            padding: 20px; display: flex; flex-direction: column; z-index: 1001;
-            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
-        }
-        
-        .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 30px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,255,65,0.3); }
+        .btn { width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #2a3544; background: rgba(255,255,255,0.03); color: #8892b0; cursor: pointer; font-size: 0.75rem; border-radius: 4px; text-align: left; }
+        .btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); }
 
-        .section-label { font-size: 0.65rem; color: #555; text-transform: uppercase; margin: 15px 0 8px; letter-spacing: 1px; font-weight: bold; }
+        /* Palette de couleurs */
+        .color-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
+        .color-dot { height: 30px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+        .color-dot:hover { transform: scale(1.1); }
+        .color-dot.active { border-color: white; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
 
-        .btn { 
-            width: 100%; padding: 12px; margin-bottom: 6px; border: 1px solid #2a3544; 
-            background: rgba(255,255,255,0.03); color: #8892b0; cursor: pointer; 
-            font-size: 0.8rem; font-weight: bold; transition: 0.2s; border-radius: 4px;
-            text-align: left;
-        }
-        .btn:hover { background: rgba(255,255,255,0.08); border-color: var(--blue); color: white; }
-        .btn.active { background: rgba(0, 255, 65, 0.1); border-color: var(--primary); color: var(--primary); }
-
-        /* Map & Overlay */
         #map { flex-grow: 1; background: #000; position: relative; }
-        #map::after { content: ""; position: absolute; top:0; left:0; width:100%; height:100%; box-shadow: inset 0 0 100px rgba(0,0,0,0.7); pointer-events: none; z-index: 1000; }
-
-        .status-bar { position: absolute; bottom: 20px; right: 20px; background: var(--panel); padding: 10px 20px; border: 1px solid var(--primary); font-size: 0.7rem; color: var(--primary); z-index: 1001; pointer-events: none; text-transform: uppercase; }
-
-        /* Popups suppression */
-        .leaflet-popup-content-wrapper { background: #0d1117; color: white; border: 1px solid #333; border-radius: 4px; }
-        .del-btn { background: var(--red); color: white; border: none; width: 100%; padding: 8px; cursor: pointer; font-weight: bold; font-family: 'JetBrains Mono'; border-radius: 2px; }
-
-        .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.7rem; opacity: 0.6; transition: 0.3s; }
-        .clear-all:hover { opacity: 1; background: var(--red); color: white; }
+        .status-bar { position: absolute; bottom: 20px; right: 20px; background: rgba(13, 17, 23, 0.9); padding: 8px 15px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; }
+        .del-btn { background: var(--red); color: white; border: none; width: 100%; padding: 5px; cursor: pointer; font-family: 'JetBrains Mono'; }
+        .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 10px; cursor: pointer; font-size: 0.7rem; }
     </style>
 </head>
 <body>
@@ -54,15 +36,17 @@
     <div id="sidebar">
         <div class="header">SITREP // ALTIS</div>
         
-        <div class="section-label">Unités Alliées</div>
-        <button class="btn active" onclick="setType('inf_blue', this)">[||] INFANTERIE</button>
-        <button class="btn" onclick="setType('veh_blue', this)">[ O ] VÉHICULE</button>
-        
-        <div class="section-label">Hostiles</div>
-        <button class="btn" onclick="setType('inf_red', this)">[||] ENNEMI INF</button>
-        <button class="btn" onclick="setType('veh_red', this)">[ O ] ENNEMI VHC</button>
-        
-        <div class="section-label">Vecteurs Tactiques</div>
+        <div class="section-label">1. Choisir Couleur</div>
+        <div class="color-picker">
+            <div class="color-dot active" style="background: var(--primary);" onclick="setColor('#00ff41', this)"></div>
+            <div class="color-dot" style="background: var(--blue);" onclick="setColor('#00d2ff', this)"></div>
+            <div class="color-dot" style="background: var(--red);" onclick="setColor('#ff3e3e', this)"></div>
+            <div class="color-dot" style="background: var(--orange);" onclick="setColor('#ff9d00', this)"></div>
+            <div class="color-dot" style="background: #222; border: 1px solid #444;" onclick="setColor('#111111', this)"></div>
+        </div>
+
+        <div class="section-label">2. Outils</div>
+        <button class="btn active" onclick="setType('inf_blue', this)">[||] UNITÉ</button>
         <button class="btn" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
         <button class="btn" onclick="setType('zone', this)">⬢ ZONE (3 CLICS)</button>
 
@@ -81,14 +65,22 @@
     map.fitBounds(bounds);
 
     let currentType = 'inf_blue';
-    let pointsBuffer = []; // Stocke les clics pour flèches et zones
+    let currentColor = '#00ff41'; // Vert par défaut
+    let pointsBuffer = [];
+
+    function setColor(color, el) {
+        currentColor = color;
+        document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+        el.classList.add('active');
+        updateStatus(`Couleur : ${color}`);
+    }
 
     function setType(t, b) {
         currentType = t;
         document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
         b.classList.add('active');
-        pointsBuffer = []; // Reset si on change d'outil
-        updateStatus(`Mode: ${t}`);
+        pointsBuffer = [];
+        updateStatus(`Outil : ${t}`);
     }
 
     function updateStatus(text) {
@@ -100,7 +92,6 @@
             const res = await fetch('/pings');
             const data = await res.json();
             
-            // On nettoie la carte (sauf l'image de fond)
             map.eachLayer(l => {
                 if (l instanceof L.Marker || l instanceof L.CircleMarker || l instanceof L.Polyline || l instanceof L.Polygon) {
                     if(!l._url) map.removeLayer(l);
@@ -108,13 +99,15 @@
             });
 
             data.forEach(p => {
-                const color = p.type.includes('blue') ? '#00d2ff' : (p.type.includes('red') ? '#ff3e3e' : '#00ff41');
+                // On utilise p.label pour stocker la couleur si c'est une flèche ou zone
+                // Si p.label est vide ou ne commence pas par #, on met une couleur par défaut
+                const color = (p.label && p.label.startsWith('#')) ? p.label : (p.type.includes('blue') ? '#00d2ff' : (p.type.includes('red') ? '#ff3e3e' : '#00ff41'));
                 const popup = `<button class="del-btn" onclick="del(${p.id})">SUPPRIMER</button>`;
                 
                 if (p.points_json) {
                     const pts = JSON.parse(p.points_json);
                     if (p.type === 'zone') {
-                        L.polygon(pts, {color: color, weight: 2, fillOpacity: 0.2}).addTo(map).bindPopup(popup);
+                        L.polygon(pts, {color: color, weight: 2, fillOpacity: 0.3}).addTo(map).bindPopup(popup);
                     } else {
                         L.polyline(pts, {color: color, weight: 4, opacity: 0.8}).addTo(map).bindPopup(popup);
                     }
@@ -130,33 +123,23 @@
     map.on('click', e => {
         const pos = [e.latlng.lat, e.latlng.lng];
         
-        if (currentType === 'arrow') {
+        if (currentType === 'arrow' || currentType === 'zone') {
             pointsBuffer.push(pos);
-            updateStatus("Point A placé...");
-            if (pointsBuffer.length === 2) {
-                save({ type: 'arrow', points_json: JSON.stringify(pointsBuffer) });
+            const limit = currentType === 'arrow' ? 2 : 3;
+            updateStatus(`${currentType}: ${pointsBuffer.length}/${limit}`);
+            
+            if (pointsBuffer.length === limit) {
+                // On stocke currentColor dans le champ "label"
+                save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: currentColor });
                 pointsBuffer = [];
-                updateStatus("Flèche enregistrée");
             }
-        } 
-        else if (currentType === 'zone') {
-            pointsBuffer.push(pos);
-            updateStatus(`Zone: Point ${pointsBuffer.length}/3`);
-            if (pointsBuffer.length === 3) {
-                save({ type: 'zone', points_json: JSON.stringify(pointsBuffer) });
-                pointsBuffer = [];
-                updateStatus("Zone enregistrée");
-            }
-        } 
-        else {
-            save({ x: pos[0], y: pos[1], type: currentType });
-            updateStatus("Unité déployée");
+        } else {
+            // Unité simple avec sa couleur choisie
+            save({ x: pos[0], y: pos[1], type: currentType, label: currentColor });
         }
     });
 
     async function save(obj) {
-        // Mise à jour visuelle immédiate (avant même que la DB réponde)
-        updateStatus("Envoi...");
         await fetch('/pings', { 
             method: 'POST', 
             headers: {'Content-Type': 'application/json'},
@@ -166,23 +149,18 @@
     }
 
     async function del(id) {
-        updateStatus("Suppression...");
-        // On cache immédiatement l'élément pour que l'utilisateur ne sente pas de latence
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
         load();
     }
 
     async function clearAll() {
-        if(confirm("Confirmer le WIPE complet de la carte ?")) {
-            updateStatus("Wiping...");
+        if(confirm("Confirmer le WIPE complet ?")) {
             await fetch('/pings?id=all', { method: 'DELETE' });
             load();
         }
     }
 
-    // Premier chargement
     load();
-    // Rafraîchissement automatique toutes les 4 secondes
     setInterval(load, 4000);
 </script>
 </body>
