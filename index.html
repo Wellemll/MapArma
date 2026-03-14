@@ -2,124 +2,197 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>TACTICAL HQ | Altis Edit</title>
+    <title>TACTICAL COMMAND | ALTIS</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #00ff41; --danger: #ff3e3e; --bg: #080a0c; }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: sans-serif; color: white; overflow: hidden; }
-        #app-container { display: flex; height: 100vh; }
-        #sidebar { width: 250px; background: #0d1117; border-right: 1px solid var(--primary); padding: 20px; display: flex; flex-direction: column; z-index: 1001; }
-        #map { flex-grow: 1; background: #000; }
-        
-        .logo { color: var(--primary); font-weight: bold; text-align: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        .type-btn { width: 100%; padding: 10px; margin-bottom: 5px; background: #1f2937; border: 1px solid #333; color: white; cursor: pointer; text-align: left; }
-        .type-btn:hover { border-color: var(--primary); }
-        .type-btn.active { background: var(--primary); color: black; font-weight: bold; }
-        
-        #draw-controls { 
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
-            z-index: 2000; display: none; background: rgba(0,0,0,0.9); padding: 15px; 
-            border: 2px solid var(--primary); border-radius: 5px;
+        :root { 
+            --blue: #00d2ff; --red: #ff3e3e; --green: #00ff41; --bg: #05070a; 
         }
-        .save-btn { background: var(--primary); color: black; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; animation: blink 1.5s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: 'Roboto Mono', monospace; overflow: hidden; }
         
-        .clear-btn { margin-top: auto; padding: 10px; background: var(--danger); color: white; border: none; cursor: pointer; font-weight: bold; }
+        #app-container { display: flex; height: 100vh; }
+        
+        /* Sidebar futuriste */
+        #sidebar { 
+            width: 280px; background: #0a0e14; border-right: 2px solid #1a222d; 
+            padding: 20px; display: flex; flex-direction: column; z-index: 1001;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+        }
+        
+        .header { font-family: 'Orbitron', sans-serif; color: var(--green); font-size: 1.2rem; text-align: center; margin-bottom: 25px; letter-spacing: 2px; text-shadow: 0 0 10px var(--green); }
+
+        .btn-group { margin-bottom: 20px; }
+        .label { font-size: 0.7rem; color: #555; text-transform: uppercase; margin-bottom: 8px; display: block; }
+
+        .btn { 
+            width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #2a3544; 
+            background: #141b24; color: #a0aab8; cursor: pointer; text-align: left; 
+            font-size: 0.8rem; font-weight: bold; transition: 0.2s; border-radius: 4px;
+        }
+        .btn:hover { background: #1c2632; border-color: var(--blue); color: white; }
+        .btn.active { background: #1c2632; border-color: var(--green); color: var(--green); box-shadow: inset 0 0 10px rgba(0,255,65,0.2); }
+
+        /* Zones de dessin clignotantes */
+        #draw-overlay { 
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
+            z-index: 2000; display: none; background: rgba(10, 14, 20, 0.95); 
+            padding: 15px 30px; border: 2px solid var(--green); border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,255,65,0.4); text-align: center;
+        }
+        .save-btn { 
+            background: var(--green); color: black; border: none; padding: 10px 25px; 
+            font-family: 'Orbitron'; font-weight: bold; cursor: pointer; border-radius: 4px;
+        }
+
+        #map { flex-grow: 1; background: #000; }
+
+        /* Styles des Popups */
+        .leaflet-popup-content-wrapper { background: #0a0e14; color: white; border: 1px solid #2a3544; border-radius: 4px; }
+        .del-btn { background: var(--red); color: white; border: none; width: 100%; padding: 8px; cursor: pointer; font-family: 'Roboto Mono'; font-weight: bold; margin-top: 5px; }
+
+        .wipe-btn { margin-top: auto; background: none; border: 1px solid var(--red); color: var(--red); padding: 10px; cursor: pointer; font-weight: bold; opacity: 0.6; }
+        .wipe-btn:hover { opacity: 1; background: var(--red); color: white; }
     </style>
 </head>
 <body>
 
-<div id="draw-controls">
-    <span id="draw-text">MODE DESSIN ACTIF</span>
-    <button class="save-btn" onclick="finishDrawing()">💾 SAUVEGARDER LE TRACÉ</button>
+<div id="draw-overlay">
+    <div style="color: var(--green); margin-bottom: 10px; font-size: 0.8rem;">DESSIN EN COURS...</div>
+    <button class="save-btn" onclick="finishDrawing()">SAUVEGARDER L'AXE</button>
 </div>
 
 <div id="app-container">
     <div id="sidebar">
-        <div class="logo">ALTIS // HQ</div>
-        <button class="type-btn active" onclick="setType('infantry', this)">👤 INFANTERIE</button>
-        <button class="type-btn" onclick="setType('vehicle', this)">🚜 VÉHICULE</button>
-        <button class="type-btn" onclick="setType('enemy', this)">⚠️ ENNEMI</button>
-        <hr style="width:100%; border:0; border-top:1px solid #333; margin:15px 0;">
-        <button class="type-btn" onclick="setType('arrow', this)">➔ FLÈCHE</button>
-        <button class="type-btn" onclick="setType('zone', this)">⬢ ZONE</button>
-        <button class="clear-btn" onclick="clearAll()">WIPE ALL DATA</button>
+        <div class="header">ALTIS COM</div>
+        
+        <span class="label">Unités Alliées</span>
+        <div class="btn-group">
+            <button class="btn active" onclick="setType('inf_blue', this)">[ || ] INFANTERIE</button>
+            <button class="btn" onclick="setType('veh_blue', this)">[  O ] VÉHICULE</button>
+        </div>
+
+        <span class="label">Menaces Ennemies</span>
+        <div class="btn-group">
+            <button class="btn" onclick="setType('inf_red', this)" style="border-color: var(--red); color: var(--red);">[ || ] ENNEMI INF</button>
+            <button class="btn" onclick="setType('veh_red', this)" style="border-color: var(--red); color: var(--red);">[  O ] ENNEMI VHC</button>
+        </div>
+
+        <span class="label">Tactique & Dessin</span>
+        <div class="btn-group">
+            <button class="btn" onclick="setType('arrow', this)">➔ FLÈCHE D'ASSAUT</button>
+            <button class="btn" onclick="setType('zone', this)">⬢ ZONE D'OPÉRATION</button>
+        </div>
+
+        <button class="wipe-btn" onclick="clearAll()">WIPE ALL DATA</button>
     </div>
     <div id="map"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.6.0/leaflet.polylinedecorator.min.js"></script>
+
 <script>
-    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false });
+    const map = L.map('map', { 
+        crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false, attributionControl: false 
+    });
     const imageBounds = [[0, 0], [1512, 2048]];
-    L.imageOverlay('altis.webp', imageBounds).addTo(map);
+    L.imageOverlay('altis.webp', imageBounds, {alt: 'map'}).addTo(map);
     map.fitBounds(imageBounds);
 
-    let currentType = 'infantry';
+    let currentType = 'inf_blue';
     let drawPoints = [];
     let tempLayer = null;
+    let tempDecor = null;
+
+    // --- CONFIGURATION DES ICONES TACTIQUES ---
+    const createIcon = (color, symbol) => L.divIcon({
+        html: `<div style="background:${color}; color:black; width:30px; height:20px; border:2px solid white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:12px; box-shadow:0 0 10px ${color}">${symbol}</div>`,
+        className: '', iconSize: [30, 20], iconAnchor: [15, 10]
+    });
+
+    const icons = {
+        inf_blue: createIcon('#00d2ff', '||'),
+        veh_blue: createIcon('#00d2ff', 'O'),
+        inf_red: createIcon('#ff3e3e', '||'),
+        veh_red: createIcon('#ff3e3e', 'O')
+    };
 
     function setType(type, btn) {
         currentType = type;
-        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         
-        // Afficher/Masquer les contrôles de dessin
         const isDrawing = (type === 'arrow' || type === 'zone');
-        document.getElementById('draw-controls').style.display = isDrawing ? 'block' : 'none';
+        document.getElementById('draw-overlay').style.display = isDrawing ? 'block' : 'none';
         
-        // Reset dessin en cours
         drawPoints = [];
         if(tempLayer) map.removeLayer(tempLayer);
+        if(tempDecor) map.removeLayer(tempDecor);
     }
 
     async function loadData() {
-        const res = await fetch('/pings');
-        const data = await res.json();
-        
-        // On nettoie tout sauf l'image de fond
-        map.eachLayer(l => {
-            if (l instanceof L.Marker || l instanceof L.Polyline || l instanceof L.Polygon) {
-                if(!l._url) map.removeLayer(l); // Ne pas supprimer l'imageOverlay
-            }
-        });
+        try {
+            const res = await fetch('/pings');
+            const data = await res.json();
+            
+            // Nettoyage intelligent
+            map.eachLayer(l => {
+                if (l instanceof L.Marker || l instanceof L.Polyline || l instanceof L.Polygon || l instanceof L.PolylineDecorator) {
+                    if(!l.options.alt) map.removeLayer(l);
+                }
+            });
 
-        data.forEach(p => {
-            let layer;
-            const popup = `<button onclick="deleteItem(${p.id})" style="background:red;color:white;border:none;width:100%;padding:5px;cursor:pointer">SUPPRIMER</button>`;
-            
-            if (p.points_json) {
-                const pts = JSON.parse(p.points_json);
-                layer = (p.type === 'zone') ? L.polygon(pts, {color: '#00ff41'}) : L.polyline(pts, {color: '#00ff41'});
-            } else if (p.x && p.y) {
-                layer = L.marker([p.x, p.y]);
-            }
-            
-            if(layer) layer.addTo(map).bindPopup(popup);
-        });
+            data.forEach(p => {
+                let layer;
+                const popup = `<div style="text-align:center"><b>SITREP</b><br><button onclick="deleteItem(${p.id})" class="del-btn">TERMINER</button></div>`;
+                
+                if (p.points_json) {
+                    const pts = JSON.parse(p.points_json);
+                    if (p.type === 'zone') {
+                        layer = L.polygon(pts, {color: '#00ff41', weight: 2, fillOpacity: 0.2});
+                    } else {
+                        // Flèche épaisse et néon
+                        layer = L.polyline(pts, {color: '#00ff41', weight: 5, opacity: 0.8});
+                        L.polylineDecorator(layer, {
+                            patterns: [{ offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 20, polygon: true, pathOptions: {fillOpacity: 1, color: '#00ff41'}}) }]
+                        }).addTo(map);
+                    }
+                } else if (p.x && p.y) {
+                    layer = L.marker([p.x, p.y], {icon: icons[p.type] || icons.inf_blue});
+                }
+                
+                if(layer) layer.addTo(map).bindPopup(popup);
+            });
+        } catch(e) {}
     }
 
     map.on('click', e => {
         if (currentType === 'arrow' || currentType === 'zone') {
             drawPoints.push([e.latlng.lat, e.latlng.lng]);
             if (tempLayer) map.removeLayer(tempLayer);
-            tempLayer = (currentType === 'arrow') ? L.polyline(drawPoints, {color: 'white', dashArray: '5, 10'}) : L.polygon(drawPoints, {color: 'white', dashArray: '5, 10'});
-            tempLayer.addTo(map);
+            if (tempDecor) map.removeLayer(tempDecor);
+            
+            if(currentType === 'arrow') {
+                tempLayer = L.polyline(drawPoints, {color: 'white', weight: 3, dashArray: '10, 10'}).addTo(map);
+            } else {
+                tempLayer = L.polygon(drawPoints, {color: 'white', weight: 2, dashArray: '5, 5'}).addTo(map);
+            }
         } else {
-            saveItem({ x: e.latlng.lat, y: e.latlng.lng, type: currentType, label: 'Unité' });
+            saveItem({ x: e.latlng.lat, y: e.latlng.lng, type: currentType });
         }
     });
 
     async function finishDrawing() {
-        if (drawPoints.length < 2) { alert("Placez au moins 2 points !"); return; }
+        if (drawPoints.length < 2) return;
         await saveItem({ type: currentType, points_json: JSON.stringify(drawPoints) });
         drawPoints = [];
         if(tempLayer) map.removeLayer(tempLayer);
-        showToast("TRACÉ ENREGISTRÉ");
+        if(tempDecor) map.removeLayer(tempDecor);
     }
 
     async function saveItem(obj) {
-        await fetch('/pings', { method: 'POST', body: JSON.stringify(obj) });
+        await fetch('/pings', { method: 'POST', body: JSON.stringify(obj), headers: {"Content-Type": "application/json"} });
         loadData();
     }
 
@@ -129,13 +202,11 @@
     }
 
     async function clearAll() {
-        if(confirm("Voulez-vous tout effacer ?")) {
+        if(confirm("CONFIRMER LE WIPE TOTAL ?")) {
             await fetch('/pings?id=all', { method: 'DELETE' });
             loadData();
         }
     }
-
-    function showToast(m) { console.log(m); } // Optionnel
 
     loadData();
     setInterval(loadData, 5000); // Sync toutes les 5 sec
