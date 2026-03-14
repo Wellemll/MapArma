@@ -2,11 +2,16 @@ export async function onRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
 
-    // SUPPRIMER un point (DELETE /pings?id=123)
+    // EFFACER TOUT ou UN SEUL point
     if (request.method === "DELETE") {
         const id = url.searchParams.get("id");
-        await env.DB.prepare("DELETE FROM pings WHERE id = ?").bind(id).run();
-        return new Response("Supprimé", { status: 200 });
+        if (id === "all") {
+            await env.DB.prepare("DELETE FROM pings").run();
+            return new Response("Carte vidée", { status: 200 });
+        } else {
+            await env.DB.prepare("DELETE FROM pings WHERE id = ?").bind(id).run();
+            return new Response("Supprimé", { status: 200 });
+        }
     }
 
     // AJOUTER un point (POST)
