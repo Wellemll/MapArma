@@ -2,72 +2,106 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Tactical Map - Operation ti-witech</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TACTICAL HQ | ti-witech</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary: #00ff41;
-            --bg: #0a0a0a;
-            --danger: #ff4444;
-            --panel: rgba(15, 15, 15, 0.95);
+            --primary-dim: rgba(0, 255, 65, 0.2);
+            --danger: #ff3e3e;
+            --bg-dark: #080a0c;
+            --sidebar-bg: rgba(13, 17, 23, 0.95);
+            --accent: #1f2937;
         }
-        body { margin: 0; background: var(--bg); color: var(--primary); font-family: 'Courier New', monospace; }
-        #map { height: 100vh; width: 100vw; background: #050505; }
 
-        /* Panneau de contrôle */
-        #ui-panel {
-            position: absolute; top: 20px; right: 20px; z-index: 1000;
-            background: var(--panel); padding: 20px; border: 2px solid var(--primary);
-            border-radius: 5px; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
-            width: 220px;
-        }
-        h3 { margin: 0 0 15px 0; font-size: 14px; text-align: center; border-bottom: 1px solid var(--primary); padding-bottom: 5px; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg-dark); font-family: 'Roboto Mono', monospace; color: #e0e0e0; }
+
+        /* Interface Layout */
+        #app-container { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
         
-        .type-btn {
-            display: flex; align-items: center; width: 100%; padding: 10px; margin-bottom: 8px;
-            background: rgba(255,255,255,0.05); border: 1px solid #333; color: #fff;
-            cursor: pointer; font-family: 'Courier New', monospace; transition: 0.2s;
-        }
-        .type-btn img { width: 20px; margin-right: 10px; filter: invert(1); }
-        .type-btn:hover { border-color: var(--primary); background: rgba(0, 255, 65, 0.1); }
-        .type-btn.active { border-color: var(--primary); background: rgba(0, 255, 65, 0.2); box-shadow: inset 0 0 10px var(--primary); }
+        #map { flex-grow: 1; background: #050505; cursor: crosshair; }
 
-        .clear-btn {
-            margin-top: 20px; width: 100%; padding: 10px; background: transparent;
-            border: 1px solid var(--danger); color: var(--danger); cursor: pointer;
-            font-weight: bold; font-family: 'Courier New', monospace;
+        /* Sidebar Professionnelle */
+        #sidebar {
+            width: 300px; background: var(--sidebar-bg); border-right: 1px solid var(--primary-dim);
+            display: flex; flex-direction: column; padding: 20px; box-shadow: 10px 0 30px rgba(0,0,0,0.5); z-index: 1001;
         }
-        .clear-btn:hover { background: var(--danger); color: white; }
 
-        /* Style des Popups */
-        .leaflet-popup-content-wrapper { background: var(--panel); color: white; border: 1px solid var(--primary); }
-        .delete-single-btn { background: var(--danger); color: white; border: none; padding: 5px; width: 100%; cursor: pointer; margin-top: 10px; }
+        .logo { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: var(--primary); margin-bottom: 30px; letter-spacing: 2px; border-bottom: 1px solid var(--primary-dim); padding-bottom: 10px; }
+
+        .section-title { font-size: 0.7rem; color: #666; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }
+
+        /* Boutons de sélection */
+        .grid-types { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; }
         
-        /* Effet sur les icônes de map */
-        .leaflet-marker-icon { filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
+        .type-card {
+            background: var(--accent); border: 1px solid #333; padding: 15px; border-radius: 8px;
+            text-align: center; cursor: pointer; transition: all 0.2s ease; font-size: 0.8rem;
+        }
+        .type-card img { width: 24px; display: block; margin: 0 auto 8px; filter: invert(1); opacity: 0.6; }
+        .type-card:hover { border-color: var(--primary); background: var(--primary-dim); }
+        .type-card.active { border-color: var(--primary); background: var(--primary-dim); box-shadow: 0 0 15px var(--primary-dim); }
+        .type-card.active img { opacity: 1; }
+
+        /* Bouton Actions */
+        .btn-action {
+            width: 100%; padding: 12px; border-radius: 6px; border: none; font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem; cursor: pointer; transition: 0.3s; margin-top: auto;
+        }
+        .btn-clear { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+        .btn-clear:hover { background: var(--danger); color: white; }
+
+        /* Custom Leaflet Design */
+        .leaflet-container { background: #0a0a0a !important; }
+        .leaflet-vignette { pointer-events: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; box-shadow: inset 0 0 150px black; z-index: 1000; }
+        
+        /* Tooltip & Popups */
+        .leaflet-popup-content-wrapper { background: var(--sidebar-bg); color: white; border: 1px solid var(--primary); border-radius: 4px; }
+        .leaflet-popup-tip { background: var(--primary); }
+
+        /* Notifications (Toast) */
+        #toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--primary); color: black; padding: 10px 20px; border-radius: 30px;
+            font-weight: bold; font-size: 0.8rem; opacity: 0; transition: 0.5s; z-index: 2000;
+        }
     </style>
 </head>
 <body>
 
-<div id="ui-panel">
-    <h3>UNITÉ TACTIQUE</h3>
-    <button class="type-btn active" onclick="setType('infantry', this)">
-        <img src="https://cdn-icons-png.flaticon.com/512/711/711769.png"> INFANTERIE
-    </button>
-    <button class="type-btn" onclick="setType('vehicle', this)">
-        <img src="https://cdn-icons-png.flaticon.com/512/2083/2083320.png"> VÉHICULE
-    </button>
-    <button class="type-btn" onclick="setType('enemy', this)">
-        <img src="https://cdn-icons-png.flaticon.com/512/822/822143.png"> ENNEMI
-    </button>
-    <button class="type-btn" onclick="setType('objective', this)">
-        <img src="https://cdn-icons-png.flaticon.com/512/3551/3551525.png"> OBJECTIF
-    </button>
+<div id="app-container">
+    <div id="sidebar">
+        <div class="logo">TI-WITECH // HQ</div>
+        
+        <div class="section-title">Déploiement Unités</div>
+        <div class="grid-types">
+            <div class="type-card active" onclick="setType('infantry', this)">
+                <img src="https://cdn-icons-png.flaticon.com/512/711/711769.png"> INF
+            </div>
+            <div class="type-card" onclick="setType('vehicle', this)">
+                <img src="https://cdn-icons-png.flaticon.com/512/2083/2083320.png"> VHC
+            </div>
+            <div class="type-card" onclick="setType('enemy', this)">
+                <img src="https://cdn-icons-png.flaticon.com/512/822/822143.png"> ENY
+            </div>
+            <div class="type-card" onclick="setType('objective', this)">
+                <img src="https://cdn-icons-png.flaticon.com/512/3551/3551525.png"> OBJ
+            </div>
+        </div>
 
-    <button class="clear-btn" onclick="clearAllPings()">✖ EFFACER TOUT</button>
+        <div class="section-title">Opérations</div>
+        <button class="btn-action btn-clear" onclick="clearAllPings()">RESET CARTE</button>
+    </div>
+
+    <div id="map">
+        <div class="leaflet-vignette"></div>
+    </div>
 </div>
 
-<div id="map"></div>
+<div id="toast">SYSTÈME MIS À JOUR</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -79,46 +113,51 @@
         objective: 'https://cdn-icons-png.flaticon.com/512/3551/3551525.png'
     };
 
-    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2 });
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, zoomControl: false });
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
     const imageBounds = [[0, 0], [1000, 1000]];
-    L.imageOverlay('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Altis_map_Arma_3.png/800px-Altis_map_Arma_3.png', imageBounds).addTo(map);
+    const mapImg = L.imageOverlay('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Altis_map_Arma_3.png/800px-Altis_map_Arma_3.png', imageBounds).addTo(map);
     map.fitBounds(imageBounds);
 
-    function setType(type, btn) {
+    function showToast(text) {
+        const t = document.getElementById('toast');
+        t.innerText = text; t.style.opacity = 1;
+        setTimeout(() => t.style.opacity = 0, 3000);
+    }
+
+    function setType(type, el) {
         currentType = type;
-        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        document.querySelectorAll('.type-card').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
     }
 
     const getIcon = (type) => L.icon({
-        iconUrl: iconUrls[type],
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
-        popupAnchor: [0, -15]
+        iconUrl: iconUrls[type], iconSize: [32, 32], iconAnchor: [16, 16]
     });
 
     async function loadPings() {
-        const response = await fetch('/pings');
-        const pings = await response.json();
-        
-        map.eachLayer((layer) => {
-            if (layer instanceof L.Marker) map.removeLayer(layer);
-        });
+        try {
+            const res = await fetch('/pings');
+            const pings = await res.json();
+            
+            map.eachLayer((layer) => { if (layer instanceof L.Marker) map.removeLayer(layer); });
 
-        pings.forEach(p => {
-            const marker = L.marker([p.x, p.y], { icon: getIcon(p.type) }).addTo(map);
-            marker.bindPopup(`
-                <div style="text-align:center">
-                    <b style="color:var(--primary)">${p.type.toUpperCase()}</b><br>
-                    <span style="color:white">${p.label}</span><br>
-                    <button class="delete-single-btn" onclick="deletePing(${p.id})">EFFACER</button>
-                </div>
-            `);
-        });
+            pings.forEach(p => {
+                const marker = L.marker([p.x, p.y], { icon: getIcon(p.type) }).addTo(map);
+                marker.bindPopup(`
+                    <div style="padding:10px; min-width:150px">
+                        <strong style="color:var(--primary)">${p.type.toUpperCase()}</strong><br>
+                        <p style="margin:5px 0">${p.label}</p>
+                        <button onclick="deletePing(${p.id})" style="background:none; border:1px solid var(--danger); color:var(--danger); width:100%; cursor:pointer; font-size:10px">DÉTRUIRE</button>
+                    </div>
+                `);
+            });
+        } catch(e) { console.error("Erreur de synchro"); }
     }
 
     map.on('click', async function(e) {
-        const label = prompt("Description du contact :");
+        const label = prompt("ID DU CONTACT :");
         if (!label) return;
 
         await fetch('/pings', {
@@ -126,22 +165,24 @@
             body: JSON.stringify({ x: e.latlng.lat, y: e.latlng.lng, label: label, type: currentType }),
             headers: { 'Content-Type': 'application/json' }
         });
+        showToast("SIGNAL ENVOYÉ");
         loadPings();
     });
 
     async function deletePing(id) {
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
+        showToast("UNITÉ RETIRÉE");
         loadPings();
     }
 
     async function clearAllPings() {
-        if (confirm("Voulez-vous vraiment effacer TOUS les points de la carte ?")) {
+        if(confirm("FORMATER TOUTES LES DONNÉES ?")) {
             await fetch('/pings?id=all', { method: 'DELETE' });
+            showToast("CARTE RÉINITIALISÉE");
             loadPings();
         }
     }
 
-    // Rafraîchissement automatique toutes les 5 secondes
     setInterval(loadPings, 5000);
     loadPings();
 </script>
