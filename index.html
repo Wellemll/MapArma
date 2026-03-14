@@ -2,89 +2,45 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>TACTICAL COMMAND | ALTIS</title>
+    <title>TACTICAL COMMAND | FIX</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --blue: #00d2ff; --red: #ff3e3e; --green: #00ff41; --bg: #05070a; 
-        }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: 'Roboto Mono', monospace; overflow: hidden; }
-        
+        :root { --blue: #00d2ff; --red: #ff3e3e; --green: #00ff41; --bg: #05070a; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: monospace; color: white; overflow: hidden; }
         #app-container { display: flex; height: 100vh; }
-        
-        /* Sidebar futuriste */
-        #sidebar { 
-            width: 280px; background: #0a0e14; border-right: 2px solid #1a222d; 
-            padding: 20px; display: flex; flex-direction: column; z-index: 1001;
-            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
-        }
-        
-        .header { font-family: 'Orbitron', sans-serif; color: var(--green); font-size: 1.2rem; text-align: center; margin-bottom: 25px; letter-spacing: 2px; text-shadow: 0 0 10px var(--green); }
-
-        .btn-group { margin-bottom: 20px; }
-        .label { font-size: 0.7rem; color: #555; text-transform: uppercase; margin-bottom: 8px; display: block; }
-
-        .btn { 
-            width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #2a3544; 
-            background: #141b24; color: #a0aab8; cursor: pointer; text-align: left; 
-            font-size: 0.8rem; font-weight: bold; transition: 0.2s; border-radius: 4px;
-        }
-        .btn:hover { background: #1c2632; border-color: var(--blue); color: white; }
-        .btn.active { background: #1c2632; border-color: var(--green); color: var(--green); box-shadow: inset 0 0 10px rgba(0,255,65,0.2); }
-
-        /* Zones de dessin clignotantes */
-        #draw-overlay { 
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
-            z-index: 2000; display: none; background: rgba(10, 14, 20, 0.95); 
-            padding: 15px 30px; border: 2px solid var(--green); border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,255,65,0.4); text-align: center;
-        }
-        .save-btn { 
-            background: var(--green); color: black; border: none; padding: 10px 25px; 
-            font-family: 'Orbitron'; font-weight: bold; cursor: pointer; border-radius: 4px;
-        }
-
+        #sidebar { width: 260px; background: #0a0e14; border-right: 2px solid #1a222d; padding: 20px; z-index: 1001; display: flex; flex-direction: column; }
         #map { flex-grow: 1; background: #000; }
-
-        /* Styles des Popups */
-        .leaflet-popup-content-wrapper { background: #0a0e14; color: white; border: 1px solid #2a3544; border-radius: 4px; }
-        .del-btn { background: var(--red); color: white; border: none; width: 100%; padding: 8px; cursor: pointer; font-family: 'Roboto Mono'; font-weight: bold; margin-top: 5px; }
-
-        .wipe-btn { margin-top: auto; background: none; border: 1px solid var(--red); color: var(--red); padding: 10px; cursor: pointer; font-weight: bold; opacity: 0.6; }
-        .wipe-btn:hover { opacity: 1; background: var(--red); color: white; }
+        .btn { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #2a3544; background: #141b24; color: #a0aab8; cursor: pointer; font-weight: bold; border-radius: 4px; text-align: left; }
+        .btn.active { border-color: var(--green); color: var(--green); background: #1c2632; }
+        #draw-ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; display: none; background: rgba(0,0,0,0.9); padding: 15px; border: 2px solid var(--green); border-radius: 8px; }
+        .save-btn { background: var(--green); color: black; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; }
+        .wipe-btn { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: none; padding: 10px; cursor: pointer; }
+        /* Style des marqueurs tactiques */
+        .tactical-icon { display: flex; align-items: center; justify-content: center; border: 2px solid white; font-weight: bold; font-size: 12px; color: black; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-<div id="draw-overlay">
-    <div style="color: var(--green); margin-bottom: 10px; font-size: 0.8rem;">DESSIN EN COURS...</div>
-    <button class="save-btn" onclick="finishDrawing()">SAUVEGARDER L'AXE</button>
+<div id="draw-ui">
+    <button class="save-btn" onclick="finishDrawing()">💾 ENREGISTRER LE TRACÉ</button>
 </div>
 
 <div id="app-container">
     <div id="sidebar">
-        <div class="header">ALTIS COM</div>
+        <h2 style="color:var(--green); font-size: 1.2rem;">ALTIS COMMAND</h2>
+        <p style="font-size: 0.7rem; color: #555;">UNITÉS ALLIÉES</p>
+        <button class="btn active" onclick="setType('inf_blue', this)">[||] INFANTERIE</button>
+        <button class="btn" onclick="setType('veh_blue', this)">[ O ] VÉHICULE</button>
         
-        <span class="label">Unités Alliées</span>
-        <div class="btn-group">
-            <button class="btn active" onclick="setType('inf_blue', this)">[ || ] INFANTERIE</button>
-            <button class="btn" onclick="setType('veh_blue', this)">[  O ] VÉHICULE</button>
-        </div>
+        <p style="font-size: 0.7rem; color: #555;">MENACES</p>
+        <button class="btn" onclick="setType('inf_red', this)">[||] ENNEMI INF</button>
+        <button class="btn" onclick="setType('veh_red', this)">[ O ] ENNEMI VHC</button>
+        
+        <p style="font-size: 0.7rem; color: #555;">DESSIN</p>
+        <button class="btn" onclick="setType('arrow', this)">➔ FLÈCHE</button>
+        <button class="btn" onclick="setType('zone', this)">⬢ ZONE</button>
 
-        <span class="label">Menaces Ennemies</span>
-        <div class="btn-group">
-            <button class="btn" onclick="setType('inf_red', this)" style="border-color: var(--red); color: var(--red);">[ || ] ENNEMI INF</button>
-            <button class="btn" onclick="setType('veh_red', this)" style="border-color: var(--red); color: var(--red);">[  O ] ENNEMI VHC</button>
-        </div>
-
-        <span class="label">Tactique & Dessin</span>
-        <div class="btn-group">
-            <button class="btn" onclick="setType('arrow', this)">➔ FLÈCHE D'ASSAUT</button>
-            <button class="btn" onclick="setType('zone', this)">⬢ ZONE D'OPÉRATION</button>
-        </div>
-
-        <button class="wipe-btn" onclick="clearAll()">WIPE ALL DATA</button>
+        <button class="wipe-btn" onclick="clearAll()">EFFACER TOUT</button>
     </div>
     <div id="map"></div>
 </div>
@@ -93,91 +49,74 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.6.0/leaflet.polylinedecorator.min.js"></script>
 
 <script>
-    const map = L.map('map', { 
-        crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false, attributionControl: false 
-    });
-    const imageBounds = [[0, 0], [1512, 2048]];
-    L.imageOverlay('altis.webp', imageBounds, {alt: 'map'}).addTo(map);
-    map.fitBounds(imageBounds);
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false });
+    const bounds = [[0, 0], [1512, 2048]];
+    L.imageOverlay('altis.webp', bounds).addTo(map);
+    map.fitBounds(bounds);
 
     let currentType = 'inf_blue';
     let drawPoints = [];
     let tempLayer = null;
-    let tempDecor = null;
 
-    // --- CONFIGURATION DES ICONES TACTIQUES ---
-    const createIcon = (color, symbol) => L.divIcon({
-        html: `<div style="background:${color}; color:black; width:30px; height:20px; border:2px solid white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:12px; box-shadow:0 0 10px ${color}">${symbol}</div>`,
-        className: '', iconSize: [30, 20], iconAnchor: [15, 10]
-    });
-
-    const icons = {
-        inf_blue: createIcon('#00d2ff', '||'),
-        veh_blue: createIcon('#00d2ff', 'O'),
-        inf_red: createIcon('#ff3e3e', '||'),
-        veh_red: createIcon('#ff3e3e', 'O')
-    };
+    // Fonction pour créer les icônes tactiques
+    function getTacticalIcon(type) {
+        let color = type.includes('blue') ? '#00d2ff' : '#ff3e3e';
+        let symbol = type.includes('inf') ? '||' : 'O';
+        return L.divIcon({
+            className: '',
+            html: `<div class="tactical-icon" style="background:${color}; width:30px; height:20px;">${symbol}</div>`,
+            iconSize: [30, 20], iconAnchor: [15, 10]
+        });
+    }
 
     function setType(type, btn) {
         currentType = type;
         document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
-        const isDrawing = (type === 'arrow' || type === 'zone');
-        document.getElementById('draw-overlay').style.display = isDrawing ? 'block' : 'none';
-        
+        document.getElementById('draw-ui').style.display = (type === 'arrow' || type === 'zone') ? 'block' : 'none';
+        cancelDraw();
+    }
+
+    function cancelDraw() {
         drawPoints = [];
-        if(tempLayer) map.removeLayer(tempLayer);
-        if(tempDecor) map.removeLayer(tempDecor);
+        if (tempLayer) map.removeLayer(tempLayer);
     }
 
     async function loadData() {
-        try {
-            const res = await fetch('/pings');
-            const data = await res.json();
-            
-            // Nettoyage intelligent
-            map.eachLayer(l => {
-                if (l instanceof L.Marker || l instanceof L.Polyline || l instanceof L.Polygon || l instanceof L.PolylineDecorator) {
-                    if(!l.options.alt) map.removeLayer(l);
-                }
-            });
+        const res = await fetch('/pings');
+        const data = await res.json();
+        
+        // On nettoie la carte avant de redessiner
+        map.eachLayer(l => {
+            if (l instanceof L.Marker || l instanceof L.Polyline || l instanceof L.Polygon || l instanceof L.PolylineDecorator) {
+                if (!l._url) map.removeLayer(l);
+            }
+        });
 
-            data.forEach(p => {
-                let layer;
-                const popup = `<div style="text-align:center"><b>SITREP</b><br><button onclick="deleteItem(${p.id})" class="del-btn">TERMINER</button></div>`;
-                
-                if (p.points_json) {
-                    const pts = JSON.parse(p.points_json);
-                    if (p.type === 'zone') {
-                        layer = L.polygon(pts, {color: '#00ff41', weight: 2, fillOpacity: 0.2});
-                    } else {
-                        // Flèche épaisse et néon
-                        layer = L.polyline(pts, {color: '#00ff41', weight: 5, opacity: 0.8});
-                        L.polylineDecorator(layer, {
-                            patterns: [{ offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 20, polygon: true, pathOptions: {fillOpacity: 1, color: '#00ff41'}}) }]
-                        }).addTo(map);
-                    }
-                } else if (p.x && p.y) {
-                    layer = L.marker([p.x, p.y], {icon: icons[p.type] || icons.inf_blue});
+        data.forEach(p => {
+            const popup = `<button onclick="deleteItem(${p.id})" style="background:red;color:white;border:none;cursor:pointer;width:100%">SUPPRIMER</button>`;
+            if (p.points_json) {
+                const pts = JSON.parse(p.points_json);
+                if (p.type === 'zone') {
+                    L.polygon(pts, {color: '#00ff41', fillOpacity: 0.3}).addTo(map).bindPopup(popup);
+                } else {
+                    let line = L.polyline(pts, {color: '#00ff41', weight: 5}).addTo(map).bindPopup(popup);
+                    L.polylineDecorator(line, {
+                        patterns: [{ offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 15, pathOptions: {color: '#00ff41', fillOpacity: 1}}) }]
+                    }).addTo(map);
                 }
-                
-                if(layer) layer.addTo(map).bindPopup(popup);
-            });
-        } catch(e) {}
+            } else if (p.x !== null) {
+                L.marker([p.x, p.y], {icon: getTacticalIcon(p.type)}).addTo(map).bindPopup(popup);
+            }
+        });
     }
 
     map.on('click', e => {
         if (currentType === 'arrow' || currentType === 'zone') {
             drawPoints.push([e.latlng.lat, e.latlng.lng]);
             if (tempLayer) map.removeLayer(tempLayer);
-            if (tempDecor) map.removeLayer(tempDecor);
-            
-            if(currentType === 'arrow') {
-                tempLayer = L.polyline(drawPoints, {color: 'white', weight: 3, dashArray: '10, 10'}).addTo(map);
-            } else {
-                tempLayer = L.polygon(drawPoints, {color: 'white', weight: 2, dashArray: '5, 5'}).addTo(map);
-            }
+            tempLayer = (currentType === 'arrow') ? L.polyline(drawPoints, {color: 'white', dashArray: '5,5'}) : L.polygon(drawPoints, {color: 'white', dashArray: '5,5'});
+            tempLayer.addTo(map);
         } else {
             saveItem({ x: e.latlng.lat, y: e.latlng.lng, type: currentType });
         }
@@ -186,13 +125,15 @@
     async function finishDrawing() {
         if (drawPoints.length < 2) return;
         await saveItem({ type: currentType, points_json: JSON.stringify(drawPoints) });
-        drawPoints = [];
-        if(tempLayer) map.removeLayer(tempLayer);
-        if(tempDecor) map.removeLayer(tempDecor);
+        cancelDraw();
     }
 
     async function saveItem(obj) {
-        await fetch('/pings', { method: 'POST', body: JSON.stringify(obj), headers: {"Content-Type": "application/json"} });
+        await fetch('/pings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(obj)
+        });
         loadData();
     }
 
@@ -202,14 +143,14 @@
     }
 
     async function clearAll() {
-        if(confirm("CONFIRMER LE WIPE TOTAL ?")) {
+        if (confirm("Tout effacer ?")) {
             await fetch('/pings?id=all', { method: 'DELETE' });
             loadData();
         }
     }
 
     loadData();
-    setInterval(loadData, 5000); // Sync toutes les 5 sec
+    setInterval(loadData, 5000);
 </script>
 </body>
 </html>
