@@ -12,7 +12,6 @@
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: 'JetBrains Mono', monospace; color: white; overflow: hidden; }
         #app { display: flex; height: 100vh; }
         
-        /* Sidebar */
         #sidebar { 
             width: 280px; background: rgba(13, 17, 23, 0.98); border-right: 1px solid #1a222d; 
             padding: 15px; display: flex; flex-direction: column; z-index: 1001; overflow-y: auto; 
@@ -21,30 +20,29 @@
         .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,255,65,0.3); }
         .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
         
-        /* Sélecteur de MODE */
         .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
         .mode-btn { padding: 10px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.7rem; font-weight: bold; border-radius: 4px; transition: 0.2s; }
         .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); }
         .mode-btn.mode-del.active { border-color: var(--red); color: var(--red); background: rgba(255, 62, 62, 0.1); }
 
-        /* Grille des icônes NATO */
         .grid-icons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
         .icon-btn { 
             background: rgba(255,255,255,0.03); border: 1px solid #2a3544; padding: 8px; 
             border-radius: 4px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center;
         }
-        .icon-btn img { width: 38px; height: auto; margin-bottom: 5px; }
+        .icon-btn img { width: 30px; height: auto; margin-bottom: 5px; pointer-events: none; }
         .icon-btn span { font-size: 0.55rem; color: #8892b0; text-align: center; font-weight: bold; }
-        .icon-btn:hover { border-color: var(--blue); }
         .icon-btn.active { border-color: var(--blue); background: rgba(0, 210, 255, 0.1); }
         .icon-btn.active span { color: white; }
 
-        /* Palette de couleurs */
         .color-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
         .color-dot { height: 25px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; }
         .color-dot.active { border-color: white; transform: scale(1.1); }
 
-        /* Utilitaires */
+        .slider-container { padding: 5px 0; margin-bottom: 10px; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--primary); }
+        .size-preview { font-size: 0.6rem; color: var(--primary); text-align: right; }
+
         .btn-util { width: 100%; padding: 10px; margin-bottom: 4px; border: 1px solid #2a3544; background: rgba(255,255,255,0.02); color: #8892b0; cursor: pointer; font-size: 0.7rem; border-radius: 4px; text-align: left; }
         .btn-util.active { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
 
@@ -63,36 +61,34 @@
         
         <div class="section-label">MODE OPÉRATOIRE</div>
         <div class="mode-selector">
-            <button id="btn-add" class="mode-btn active" onclick="setInterMode('ADD')">AJOUTER</button>
+            <button id="btn-add" class="mode-btn active" onclick="setInterMode('ADD')">AJOUTER/EDIT</button>
             <button id="btn-del" class="mode-btn mode-del" onclick="setInterMode('DEL')">SUPPRIMER</button>
         </div>
 
-        <div class="section-label">ICÔNES TACTIQUES</div>
+        <div class="section-label">UNITÉS & COMBAT</div>
         <div class="grid-icons">
-            <button class="icon-btn active" onclick="setType('Infantry', this)">
-                <img src="Icons/Infantry.png"><span>INFANTERIE</span>
-            </button>
-            <button class="icon-btn" onclick="setType('Vehicule', this)">
-                <img src="Icons/Vehicule.png"><span>VHC LÉGER</span>
-            </button>
-            <button class="icon-btn" onclick="setType('HeavyArmor', this)">
-                <img src="Icons/HeavyArmor.png"><span>BLINDÉ LOURD</span>
-            </button>
-            <button class="icon-btn" onclick="setType('Armourwheeled', this)">
-                <img src="Icons/Armourwheeled.png"><span>BLINDÉ LÉGER</span>
-            </button>
-            <button class="icon-btn" onclick="setType('Artillery', this)">
-                <img src="Icons/Artillery.png"><span>ARTILLERIE</span>
-            </button>
-            <button class="icon-btn" onclick="setType('Airdefense', this)">
-                <img src="Icons/Airdefense.png"><span>DÉFENSE AIR</span>
-            </button>
-            <button class="icon-btn" onclick="setType('Attackhelicopter', this)">
-                <img src="Icons/Attackhelicopter.png"><span>HÉLICO ATT.</span>
-            </button>
+            <button class="icon-btn active" onclick="setType('Infantry', this)"><img src="Icons/Infantry.png"><span>INFANTERIE</span></button>
+            <button class="icon-btn" onclick="setType('Vehicule', this)"><img src="Icons/Vehicule.png"><span>VHC LÉGER</span></button>
+            <button class="icon-btn" onclick="setType('HeavyArmor', this)"><img src="Icons/HeavyArmor.png"><span>BLINDÉ LOURD</span></button>
+            <button class="icon-btn" onclick="setType('Attackhelicopter', this)"><img src="Icons/Attackhelicopter.png"><span>HÉLICO ATT.</span></button>
+            <button class="icon-btn" onclick="setType('Dead', this)"><img src="Icons/Dead.png"><span>DANGER / KIA</span></button>
         </div>
 
-        <div class="section-label">COULEUR (TRACÉS / UNITES)</div>
+        <div class="section-label">SUPPORT & MINES</div>
+        <div class="grid-icons">
+            <button class="icon-btn" onclick="setType('Mine', this)"><img src="Icons/Mine.png"><span>MINE TACT.</span></button>
+            <button class="icon-btn" onclick="setType('Artillery', this)"><img src="Icons/Artillery.png"><span>ARTILLERIE</span></button>
+            <button class="icon-btn" onclick="setType('Airdefense', this)"><img src="Icons/Airdefense.png"><span>DÉFENSE AIR</span></button>
+            <button class="icon-btn" onclick="setType('Armourwheeled', this)"><img src="Icons/Armourwheeled.png"><span>BLINDÉ LÉGER</span></button>
+        </div>
+
+        <div class="section-label">DIMENSION DES ICÔNES</div>
+        <div class="slider-container">
+            <input type="range" id="sizeSlider" min="20" max="100" value="40" oninput="updateSizePreview(this.value)">
+            <div class="size-preview" id="sizeVal">40px</div>
+        </div>
+
+        <div class="section-label">COULEUR TACTIQUE</div>
         <div class="color-picker">
             <div class="color-dot active" style="background: var(--primary);" onclick="setColor('#00ff41', this)"></div>
             <div class="color-dot" style="background: var(--blue);" onclick="setColor('#00d2ff', this)"></div>
@@ -110,7 +106,7 @@
     </div>
     
     <div id="map"></div>
-    <div class="status-bar" id="status">SYSTÈME PRÊT</div>
+    <div class="status-bar" id="status">TERMINAL PRÊT</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -122,9 +118,9 @@
     let interMode = 'ADD';
     let currentType = 'Infantry';
     let currentColor = '#00ff41';
+    let currentSize = 40;
     let pointsBuffer = [];
 
-    // Configuration des chemins vers ton dossier Icons/
     const iconFiles = {
         'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
         'Vehicule': { blue: 'Icons/Vehicule.png', red: 'Icons/Vehicule2.png' },
@@ -132,8 +128,15 @@
         'Armourwheeled': { blue: 'Icons/Armourwheeled.png', red: 'Icons/Armourwheeled2.png' },
         'Artillery': { blue: 'Icons/Artillery.png', red: 'Icons/Artillery2.png' },
         'Airdefense': { blue: 'Icons/Airdefense.png', red: 'Icons/Airdefense2.png' },
-        'Attackhelicopter': { blue: 'Icons/Attackhelicopter.png', red: 'Icons/Attackhelicopter2.png' }
+        'Attackhelicopter': { blue: 'Icons/Attackhelicopter.png', red: 'Icons/Attackhelicopter2.png' },
+        'Mine': { blue: 'Icons/Mine.png', red: 'Icons/Mine2.png' },
+        'Dead': { any: 'Icons/Dead.png' }
     };
+
+    function updateSizePreview(val) {
+        currentSize = val;
+        document.getElementById('sizeVal').innerText = val + "px";
+    }
 
     function setInterMode(m) {
         interMode = m;
@@ -165,29 +168,45 @@
         map.eachLayer(l => { if ((l instanceof L.Marker || l instanceof L.CircleMarker || l instanceof L.Polyline || l instanceof L.Polygon) && !l._url) map.removeLayer(l); });
 
         data.forEach(p => {
-            const color = (p.label && p.label.startsWith('#')) ? p.label.split('|')[0] : '#00ff41';
+            const parts = p.label ? p.label.split('|') : [];
+            const color = (parts[0] && parts[0].startsWith('#')) ? parts[0] : '#00ff41';
+            const size = parts[1] ? parseInt(parts[1]) : 40;
+            
             let layer;
 
             if (p.type === 'text') {
                 layer = L.marker([p.x, p.y], {
-                    icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${p.label.split('|')[1] || 'TEXTE'}</span>` })
+                    icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${parts[2] || 'TEXTE'}</span>` })
                 });
             } else if (p.points_json) {
                 const pts = JSON.parse(p.points_json);
                 layer = (p.type === 'zone') ? L.polygon(pts, {color: color, fillOpacity: 0.3}) : L.polyline(pts, {color: color, weight: 4});
             } else if (iconFiles[p.type]) {
                 const isRed = (color === '#ff3e3e');
-                const imgPath = isRed ? iconFiles[p.type].red : iconFiles[p.type].blue;
+                let imgPath = iconFiles[p.type].any ? iconFiles[p.type].any : (isRed ? iconFiles[p.type].red : iconFiles[p.type].blue);
+                
                 layer = L.marker([p.x, p.y], {
-                    icon: L.icon({ iconUrl: imgPath, iconSize: [40, 28], iconAnchor: [20, 14] })
+                    icon: L.icon({ 
+                        iconUrl: imgPath, 
+                        iconSize: [size, (size * 0.75)],
+                        iconAnchor: [(size/2), (size*0.75/2)] 
+                    })
                 });
             } else {
                 layer = L.circleMarker([p.x, p.y], {radius: 7, color: color, fillOpacity: 0.9, fillColor: color});
             }
 
-            if (interMode === 'DEL') {
-                layer.on('click', (e) => { L.DomEvent.stopPropagation(e); del(p.id); });
-            }
+            // GESTION INTELLIGENTE DES CLICS SUR LES OBJETS
+            layer.on('click', (e) => { 
+                L.DomEvent.stopPropagation(e); 
+                if (interMode === 'DEL') {
+                    del(p.id); 
+                } else if (interMode === 'ADD' && !p.points_json) {
+                    // MODE EDIT : Si on clique sur une unité en mode ADD, on la met à jour
+                    updateExisting(p.id, p.x, p.y, p.type);
+                }
+            });
+
             layer.addTo(map);
         });
     }
@@ -198,18 +217,25 @@
         
         if (currentType === 'text') {
             const txt = prompt("Entrez votre texte :");
-            if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${txt}` });
+            if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${txt}` });
         } else if (currentType === 'arrow' || currentType === 'zone') {
             pointsBuffer.push(pos);
             const limit = currentType === 'arrow' ? 2 : 3;
             if (pointsBuffer.length === limit) {
-                save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: currentColor });
+                save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` });
                 pointsBuffer = [];
             }
         } else {
-            save({ x: pos[0], y: pos[1], type: currentType, label: currentColor });
+            save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` });
         }
     });
+
+    async function updateExisting(id, x, y, type) {
+        updateStatus("MISE À JOUR UNITÉ...");
+        // On supprime l'ancienne et on repose la nouvelle avec les réglages actuels
+        await fetch(`/pings?id=${id}`, { method: 'DELETE' });
+        await save({ x: x, y: y, type: type, label: `${currentColor}|${currentSize}` });
+    }
 
     async function save(obj) { await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) }); load(); }
     async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
