@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Arma3-Map | ALTIS</title>
+    <title>ALTIS COMMAND TERMINAL</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -12,157 +12,189 @@
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: 'JetBrains Mono', monospace; color: white; overflow: hidden; }
         #app { display: flex; height: 100vh; }
         
+        /* Sidebar */
         #sidebar { 
-            width: 260px; background: rgba(13, 17, 23, 0.98); border-right: 1px solid #1a222d; 
-            padding: 20px; display: flex; flex-direction: column; z-index: 1001; 
+            width: 280px; background: rgba(13, 17, 23, 0.98); border-right: 1px solid #1a222d; 
+            padding: 15px; display: flex; flex-direction: column; z-index: 1001; overflow-y: auto; 
         }
 
-        .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 20px; letter-spacing: 2px; }
-        .section-label { font-size: 0.65rem; color: #555; text-transform: uppercase; margin: 15px 0 8px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
+        .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,255,65,0.3); }
+        .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
         
         /* Sélecteur de MODE */
-        .mode-container { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
-        .mode-btn { padding: 10px; border: 1px solid #2a3544; background: #111; color: #555; cursor: pointer; font-weight: bold; font-size: 0.7rem; border-radius: 4px; }
+        .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
+        .mode-btn { padding: 10px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.7rem; font-weight: bold; border-radius: 4px; transition: 0.2s; }
         .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); }
         .mode-btn.mode-del.active { border-color: var(--red); color: var(--red); background: rgba(255, 62, 62, 0.1); }
 
-        .btn { width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #2a3544; background: rgba(255,255,255,0.03); color: #8892b0; cursor: pointer; font-size: 0.75rem; border-radius: 4px; text-align: left; }
-        .btn.active { border-color: var(--blue); color: white; background: rgba(0, 210, 255, 0.1); }
+        /* Grille des icônes NATO */
+        .grid-icons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+        .icon-btn { 
+            background: rgba(255,255,255,0.03); border: 1px solid #2a3544; padding: 8px; 
+            border-radius: 4px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center;
+        }
+        .icon-btn img { width: 38px; height: auto; margin-bottom: 5px; }
+        .icon-btn span { font-size: 0.55rem; color: #8892b0; text-align: center; font-weight: bold; }
+        .icon-btn:hover { border-color: var(--blue); }
+        .icon-btn.active { border-color: var(--blue); background: rgba(0, 210, 255, 0.1); }
+        .icon-btn.active span { color: white; }
 
-        .color-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 15px; }
-        .color-dot { height: 25px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
-        .color-dot.active { border-color: white; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        /* Utilitaires */
+        .btn-util { width: 100%; padding: 10px; margin-bottom: 4px; border: 1px solid #2a3544; background: rgba(255,255,255,0.02); color: #8892b0; cursor: pointer; font-size: 0.7rem; border-radius: 4px; text-align: left; }
+        .btn-util.active { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
+
+        .color-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
+        .color-dot { height: 25px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; }
+        .color-dot.active { border-color: white; transform: scale(1.1); }
 
         #map { flex-grow: 1; background: #000; cursor: crosshair; }
-        .status-bar { position: absolute; bottom: 20px; right: 20px; background: rgba(13, 17, 23, 0.9); padding: 8px 15px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; pointer-events: none; }
+        .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; pointer-events: none; }
         
-        .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 10px; cursor: pointer; font-size: 0.7rem; }
-
-        /* Style pour les labels de texte sur la map */
-        .map-text-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 2px 2px 2px black; font-size: 14px; white-space: nowrap; }
+        .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; font-size: 14px; white-space: nowrap; }
+        .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 8px; cursor: pointer; font-size: 0.6rem; opacity: 0.5; }
+        .clear-all:hover { opacity: 1; background: var(--red); color: white; }
     </style>
 </head>
 <body>
 
 <div id="app">
     <div id="sidebar">
-        <div class="header">Altis</div>
+        <div class="header">ALTIS COM</div>
         
-        <div class="section-label">MODE OPÉRATOIRE</div>
-        <div class="mode-container">
-            <button id="mode-add" class="mode-btn active" onclick="setMode('ADD')">AJOUTER</button>
-            <button id="mode-del" class="mode-btn mode-del" onclick="setMode('DEL')">SUPPRIMER</button>
+        <div class="section-label">1. Mode de travail</div>
+        <div class="mode-selector">
+            <button id="btn-add" class="mode-btn active" onclick="setInterMode('ADD')">AJOUTER</button>
+            <button id="btn-del" class="mode-btn mode-del" onclick="setInterMode('DEL')">SUPPRIMER</button>
         </div>
 
-        <div class="section-label">1. Couleur</div>
+        <div class="section-label">2. Sélectionner Unité</div>
+        <div class="grid-icons">
+            <button class="icon-btn active" onclick="setType('unit', this)">
+                <div style="font-size: 20px;">•</div><span>POINT BASE</span>
+            </button>
+            <button class="icon-btn" onclick="setType('HeavyArmor', this)">
+                <img src="Icons/HeavyArmor.png"><span>BLINDÉ LOURD</span>
+            </button>
+            <button class="icon-btn" onclick="setType('Armourwheeled', this)">
+                <img src="Icons/Armourwheeled.png"><span>BLINDÉ LÉGER</span>
+            </button>
+            <button class="icon-btn" onclick="setType('Artillery', this)">
+                <img src="Icons/Artillery.png"><span>ARTILLERIE</span>
+            </button>
+            <button class="icon-btn" onclick="setType('Airdefense', this)">
+                <img src="Icons/Airdefense.png"><span>DÉFENSE AIR</span>
+            </button>
+            <button class="icon-btn" onclick="setType('Attackhelicopter', this)">
+                <img src="Icons/Attackhelicopter.png"><span>HÉLICO ATT.</span>
+            </button>
+        </div>
+
+        <div class="section-label">3. Couleur (Tracés / Unités)</div>
         <div class="color-picker">
-            <div class="color-dot active" style="background: #00ff41;" onclick="setColor('#00ff41', this)"></div>
-            <div class="color-dot" style="background: #00d2ff;" onclick="setColor('#00d2ff', this)"></div>
-            <div class="color-dot" style="background: #ff3e3e;" onclick="setColor('#ff3e3e', this)"></div>
-            <div class="color-dot" style="background: #ff9d00;" onclick="setColor('#ff9d00', this)"></div>
+            <div class="color-dot active" style="background: var(--primary);" onclick="setColor('#00ff41', this)"></div>
+            <div class="color-dot" style="background: var(--blue);" onclick="setColor('#00d2ff', this)"></div>
+            <div class="color-dot" style="background: var(--red);" onclick="setColor('#ff3e3e', this)"></div>
+            <div class="color-dot" style="background: var(--orange);" onclick="setColor('#ff9d00', this)"></div>
             <div class="color-dot" style="background: #ffffff;" onclick="setColor('#ffffff', this)"></div>
         </div>
 
-        <div class="section-label">2. Outils</div>
-        <button class="btn active" onclick="setType('unit', this)">[ • ] UNITÉ / POINT</button>
-        <button class="btn" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
-        <button class="btn" onclick="setType('zone', this)">⬢ ZONE (3 CLICS)</button>
-        <button class="btn" onclick="setType('text', this)">📝 TEXTE TACTIQUE</button>
+        <div class="section-label">4. Outils Spéciaux</div>
+        <button class="btn-util" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
+        <button class="btn-util" onclick="setType('zone', this)">⬢ ZONE (3 CLICS)</button>
+        <button class="btn-util" onclick="setType('text', this)">📝 TEXTE TACTIQUE</button>
 
-        <button class="clear-all" onclick="clearAll()">RESET TERMINAL</button>
+        <button class="clear-all" onclick="clearAll()">WIPE ALL DATA</button>
     </div>
     
     <div id="map"></div>
-    <div class="status-bar" id="status">SYSTÈME OPÉRATIONNEL</div>
+    <div class="status-bar" id="status">TERMINAL PRÊT</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false });
-    const bounds = [[0, 0], [1512, 2048]];
-    L.imageOverlay('altis.webp', bounds).addTo(map);
-    map.fitBounds(bounds);
+    L.imageOverlay('altis.webp', [[0, 0], [1512, 2048]]).addTo(map);
+    map.fitBounds([[0, 0], [1512, 2048]]);
 
-    let currentMode = 'ADD'; // 'ADD' ou 'DEL'
+    let interMode = 'ADD'; // ADD ou DEL
     let currentType = 'unit';
     let currentColor = '#00ff41';
     let pointsBuffer = [];
 
-    function setMode(m) {
-        currentMode = m;
-        document.getElementById('mode-add').classList.toggle('active', m === 'ADD');
-        document.getElementById('mode-del').classList.toggle('active', m === 'DEL');
+    // Chemins vers ton dossier Icons/
+    const iconFiles = {
+        'HeavyArmor': { blue: 'Icons/HeavyArmor.png', red: 'Icons/HeavyArmor2.png' },
+        'Armourwheeled': { blue: 'Icons/Armourwheeled.png', red: 'Icons/Armourwheeled2.png' },
+        'Artillery': { blue: 'Icons/Artillery.png', red: 'Icons/Artillery2.png' },
+        'Airdefense': { blue: 'Icons/Airdefense.png', red: 'Icons/Airdefense2.png' },
+        'Attackhelicopter': { blue: 'Icons/Attackhelicopter.png', red: 'Icons/Attackhelicopter2.png' }
+    };
+
+    function setInterMode(m) {
+        interMode = m;
+        document.getElementById('btn-add').classList.toggle('active', m === 'ADD');
+        document.getElementById('btn-del').classList.toggle('active', m === 'DEL');
         updateStatus(`MODE : ${m}`);
-        load(); // On recharge pour activer/désactiver les interactions
+        load(); // On recharge pour activer/désactiver la suppression
     }
 
-    function setColor(color, el) {
-        currentColor = color;
+    function setColor(c, el) {
+        currentColor = c;
         document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
         el.classList.add('active');
     }
 
     function setType(t, b) {
         currentType = t;
-        document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active'));
         b.classList.add('active');
         pointsBuffer = [];
-        if(currentMode !== 'ADD') setMode('ADD');
+        if(interMode !== 'ADD') setInterMode('ADD');
         updateStatus(`OUTIL : ${t}`);
     }
 
-    function updateStatus(text) { document.getElementById('status').innerText = text; }
+    function updateStatus(t) { document.getElementById('status').innerText = t; }
 
     async function load() {
-        try {
-            const res = await fetch('/pings');
-            const data = await res.json();
-            
-            map.eachLayer(l => {
-                if ((l instanceof L.Marker || l instanceof L.CircleMarker || l instanceof L.Polyline || l instanceof L.Polygon) && !l._url) map.removeLayer(l);
-            });
+        const res = await fetch('/pings');
+        const data = await res.json();
+        map.eachLayer(l => { if ((l instanceof L.Marker || l instanceof L.CircleMarker || l instanceof L.Polyline || l instanceof L.Polygon) && !l._url) map.removeLayer(l); });
 
-            data.forEach(p => {
-                // Gestion de la couleur stockée dans label pour les tracés
-                const color = (p.label && p.label.startsWith('#')) ? p.label.split('|')[0] : '#00ff41';
-                let layer;
+        data.forEach(p => {
+            const color = (p.label && p.label.startsWith('#')) ? p.label.split('|')[0] : '#00ff41';
+            let layer;
 
-                if (p.type === 'text') {
-                    const textVal = p.label.includes('|') ? p.label.split('|')[1] : 'TEXTE';
-                    layer = L.marker([p.x, p.y], {
-                        icon: L.divIcon({ className: 'map-text-label', html: `<span style="color:${color}">${textVal}</span>` })
-                    });
-                } else if (p.points_json) {
-                    const pts = JSON.parse(p.points_json);
-                    layer = (p.type === 'zone') ? L.polygon(pts, {color: color, weight: 2, fillOpacity: 0.3}) : L.polyline(pts, {color: color, weight: 4});
-                } else {
-                    layer = L.circleMarker([p.x, p.y], { radius: 7, color: color, weight: 2, fillOpacity: 0.9, fillColor: color });
-                }
+            if (p.type === 'text') {
+                layer = L.marker([p.x, p.y], {
+                    icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${p.label.split('|')[1] || 'TEXTE'}</span>` })
+                });
+            } else if (p.points_json) {
+                const pts = JSON.parse(p.points_json);
+                layer = (p.type === 'zone') ? L.polygon(pts, {color: color, fillOpacity: 0.3}) : L.polyline(pts, {color: color, weight: 4});
+            } else if (iconFiles[p.type]) {
+                const isRed = (color === '#ff3e3e');
+                const imgPath = isRed ? iconFiles[p.type].red : iconFiles[p.type].blue;
+                layer = L.marker([p.x, p.y], {
+                    icon: L.icon({ iconUrl: imgPath, iconSize: [40, 28], iconAnchor: [20, 14] })
+                });
+            } else {
+                layer = L.circleMarker([p.x, p.y], {radius: 7, color: color, fillOpacity: 0.9, fillColor: color});
+            }
 
-                // Interaction selon le mode
-                if (currentMode === 'DEL') {
-                    layer.on('click', (e) => { 
-                        L.DomEvent.stopPropagation(e); // Empêche de poser un point en même temps
-                        del(p.id); 
-                    });
-                    layer.bindTooltip("CLIQUEZ POUR SUPPRIMER", {sticky: true});
-                } else {
-                    layer.off('click'); // Désactive la suppression en mode ADD
-                }
-
-                layer.addTo(map);
-            });
-        } catch(e) { console.error("Sync error"); }
+            if (interMode === 'DEL') {
+                layer.on('click', (e) => { L.DomEvent.stopPropagation(e); del(p.id); });
+            }
+            layer.addTo(map);
+        });
     }
 
     map.on('click', e => {
-        if (currentMode !== 'ADD') return;
-        
+        if (interMode !== 'ADD') return;
         const pos = [e.latlng.lat, e.latlng.lng];
         
         if (currentType === 'text') {
-            const val = prompt("TEXTE À AFFICHER :");
-            if (val) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${val}` });
+            const txt = prompt("Entrez votre texte :");
+            if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${txt}` });
         } else if (currentType === 'arrow' || currentType === 'zone') {
             pointsBuffer.push(pos);
             const limit = currentType === 'arrow' ? 2 : 3;
@@ -171,26 +203,13 @@
                 pointsBuffer = [];
             }
         } else {
-            save({ x: pos[0], y: pos[1], type: 'unit', label: currentColor });
+            save({ x: pos[0], y: pos[1], type: currentType, label: currentColor });
         }
     });
 
-    async function save(obj) {
-        await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) });
-        load();
-    }
-
-    async function del(id) {
-        await fetch(`/pings?id=${id}`, { method: 'DELETE' });
-        load();
-    }
-
-    async function clearAll() {
-        if(confirm("WIPE TOTAL DE LA CARTE ?")) {
-            await fetch('/pings?id=all', { method: 'DELETE' });
-            load();
-        }
-    }
+    async function save(obj) { await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) }); load(); }
+    async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
+    async function clearAll() { if(confirm("WIPE TOTAL DE LA CARTE ?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
 
     load();
     setInterval(load, 4000);
