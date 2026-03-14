@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arma 3 Tactical Map</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body { margin: 0; padding: 0; background: #1a1a1a; color: white; font-family: sans-serif; }
+        #map { height: 100vh; width: 100vw; background: #0b0b0b; }
+        .menu-top { position: absolute; top: 10px; left: 50px; z-index: 1000; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; border: 1px solid #444; }
+    </style>
+</head>
+<body>
+
+    <div class="menu-top">
+        <b>Tactical Map v1.0</b> | Cliquez sur la carte pour placer un point.
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // 1. Configuration de la carte pour une IMAGE (pas une carte réelle)
+        const map = L.map('map', {
+            crs: L.CRS.Simple, // Utilise des coordonnées X,Y simples au lieu de Lat/Lon
+            minZoom: -2
+        });
+
+        // 2. Ta carte Arma 3 (Remplace l'URL par l'image de ta map)
+        const mapImageUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Altis_map_Arma_3.png/800px-Altis_map_Arma_3.png';
+        const imageBounds = [[0, 0], [1000, 1000]]; // Taille virtuelle de la map
+
+        L.imageOverlay(mapImageUrl, imageBounds).addTo(map);
+        map.fitBounds(imageBounds);
+
+        // 3. Fonction pour ajouter un Ping
+        function createPing(x, y, label) {
+            const marker = L.marker([x, y]).addTo(map);
+            marker.bindPopup(`<b>${label}</b><br>Coord: ${x.toFixed(0)}, ${y.toFixed(0)}`).openPopup();
+        }
+
+        // 4. Interaction : Clic pour poser un point
+        map.on('click', function(e) {
+            const { lat, lng } = e.latlng;
+            
+            // Ici, normalement, tu envoies ces données à Cloudflare D1 / Worker
+            console.log("Envoi au serveur : ", { x: lat, y: lng });
+            
+            // Affichage local immédiat
+            createPing(lat, lng, "Nouveau Point");
+        });
+
+    </script>
+</body>
+</html>
