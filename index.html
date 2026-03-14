@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL | NATO STD</title>
+    <title>ALTIS COMMAND TERMINAL</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -82,7 +82,7 @@
             <button class="icon-btn" onclick="setType('Armourwheeled', this)"><img src="Icons/Armourwheeled.png"><span>BLINDÉ LÉGER</span></button>
         </div>
 
-        <div class="section-label">LARGEUR ÉLÉMENT (PX)</div>
+        <div class="section-label">TAILLE ÉLÉMENT</div>
         <div class="slider-container">
             <input type="range" id="sizeSlider" min="10" max="150" value="50" oninput="updateSizePreview(this.value)">
             <div class="size-preview" id="sizeVal">50px</div>
@@ -188,11 +188,12 @@
                 const isRed = (color === '#ff3e3e');
                 let imgPath = iconFiles[p.type].any ? iconFiles[p.type].any : (isRed ? iconFiles[p.type].red : iconFiles[p.type].blue);
                 
+                // RETOUR AU MODE STANDARD SANS RATIO FORCÉ
                 layer = L.marker([p.x, p.y], {
                     icon: L.icon({ 
                         iconUrl: imgPath, 
-                        iconSize: [size, (size * 1.66)], 
-                        iconAnchor: [(size/2), (size * 1.66 / 2)] 
+                        iconSize: [size, size], // Carré : laisse l'image gérer son propre ratio
+                        iconAnchor: [size/2, size/2] 
                     })
                 });
             }
