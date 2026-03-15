@@ -46,12 +46,12 @@
 
         .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
         
-        /* QUICK JUMP GRID */
+        /* GRILLE SIGNETS MISE À JOUR (3 colonnes pour 6 boutons) */
         .bookmark-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 10px; }
         .btn-jump { 
-            background: #111; border: 1px solid #333; color: #8892b0; font-size: 0.65rem; 
-            padding: 6px; cursor: pointer; border-radius: 3px; font-weight: bold; transition: 0.2s;
-            text-align: center;
+            background: #111; border: 1px solid #333; color: #8892b0; font-size: 0.62rem; 
+            padding: 6px 2px; cursor: pointer; border-radius: 3px; font-weight: bold; transition: 0.2s;
+            text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .btn-jump:hover { border-color: var(--blue); color: white; background: rgba(0, 210, 255, 0.1); }
 
@@ -98,6 +98,8 @@
             <button class="btn-jump" onclick="jumpTo([565, 1089])">PYRGOS</button>
             <button class="btn-jump" onclick="jumpTo([987, 891])">ATHIRA</button>
             <button class="btn-jump" onclick="jumpTo([851, 931])">AIRPORT</button>
+            <button class="btn-jump" onclick="jumpTo([1169, 1719])">SOFIA</button>
+            <button class="btn-jump" onclick="jumpTo([587, 1744])">AGIA MARINA</button>
         </div>
 
         <div class="section-label">MODE OPÉRATOIRE</div>
@@ -150,7 +152,7 @@
         <div class="audio-panel">
             <div class="audio-row" style="display:flex; align-items:center; gap:10px;">
                 <button id="mute-btn" class="mute-btn" onclick="toggleMute()">MUTE</button>
-                <input type="range" id="volSlider" min="0" max="1" step="0.1" value="0.5">
+                <input type="range" id="volSlider" min="0" max="1" step="0.1" value="0.5" style="flex-grow:1">
             </div>
         </div>
 
@@ -202,13 +204,13 @@
         } catch(e){}
     }
 
-    // --- FONCTION JUMP ---
+    // FONCTION JUMP
     function jumpTo(pos) {
         map.flyTo(pos, 1, { animate: true, duration: 1.2 });
         updateStatus(`DÉPLOIEMENT : ZONE ${pos}`);
     }
 
-    // --- CLIC DROIT COORDONNÉES ---
+    // CLIC DROIT COORDONNÉES
     map.on('contextmenu', (e) => {
         alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]");
     });
