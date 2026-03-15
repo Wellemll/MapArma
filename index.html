@@ -13,7 +13,7 @@
         #app { display: flex; height: 100vh; }
         #sidebar { width: 280px; background: linear-gradient(135deg, #10141d 0%, #05070a 100%); border-right: 4px solid #1a222d; border-image: linear-gradient(to bottom, #2a3544, #10141d) 1 100%; padding: 15px; display: flex; flex-direction: column; z-index: 1001; overflow-y: auto; box-shadow: inset -10px 0 20px rgba(0,0,0,0.8); }
         .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px; text-shadow: 0 0 8px var(--primary); animation: glitch 4s infinite; }
-        @keyframes glitch { 0% { transform: translate(0); } 2% { transform: translate(2px, -1px); text-shadow: 2px 0 var(--red), -2px 0 var(--blue); opacity: 0.8; } 4% { transform: translate(-2px, 1px); text-shadow: -2px 0 var(--red), 2px 0 var(--blue); opacity: 1; } 100% { transform: translate(0); } }
+        @keyframes glitch { 0% { transform: translate(0); } 2% { transform: translate(2px, -1px); text-shadow: 2px 0 var(--red), -2px 0 var(--blue); opacity: 0.8; } 100% { transform: translate(0); } }
         .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
         .bookmark-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 10px; }
         .btn-jump { background: #111; border: 1px solid #333; color: #8892b0; font-size: 0.62rem; padding: 6px 2px; cursor: pointer; border-radius: 3px; font-weight: bold; transition: 0.2s; text-align: center; }
@@ -21,8 +21,6 @@
         .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
         .mode-btn { padding: 10px 2px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.6rem; font-weight: bold; border-radius: 4px; text-align: center; transition: 0.2s; }
         .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); box-shadow: 0 0 8px var(--primary); }
-        .mode-btn#btn-edit.active { border-color: var(--blue); color: var(--blue); background: rgba(0, 210, 255, 0.1); box-shadow: 0 0 8px var(--blue); }
-        .mode-btn.mode-del.active { border-color: var(--red); color: var(--red); background: rgba(255, 62, 62, 0.1); box-shadow: 0 0 8px var(--red); }
         .grid-icons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
         .icon-btn { background: rgba(255,255,255,0.03); border: 1px solid #2a3544; padding: 8px; border-radius: 4px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; }
         .icon-btn img { width: 30px; height: auto; margin-bottom: 5px; filter: drop-shadow(0 0 2px black); }
@@ -123,6 +121,7 @@
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
     let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0, isMuted = false;
     let drawingPolyline; 
+    let pendingIconPos = null; // Stocke la position de l'icône avant de demander la direction
 
     const iconFiles = {
         'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
@@ -137,38 +136,13 @@
         'Dot': { isVector: true }
     };
 
-    function toggleMute() { 
-        isMuted = !isMuted; 
-        const btn = document.getElementById('mute-btn');
-        if (isMuted) {
-            btn.innerHTML = "🔇";
-            btn.classList.add('active');
-        } else {
-            btn.innerHTML = "🔊";
-            btn.classList.remove('active');
-        }
-    }
-    
-    function playTacticalPing() {
-        if (isMuted) return;
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const vol = document.getElementById('volSlider').value;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'square'; osc.frequency.setValueAtTime(880, ctx.currentTime);
-            gain.gain.setValueAtTime(vol * 0.1, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.start(); osc.stop(ctx.currentTime + 0.1);
-        } catch(e){}
-    }
-
+    function toggleMute() { isMuted = !isMuted; const btn = document.getElementById('mute-btn'); btn.innerHTML = isMuted ? "🔇" : "🔊"; btn.classList.toggle('active', isMuted); }
+    function playTacticalPing() { if (isMuted) return; try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const vol = document.getElementById('volSlider').value; const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(880, ctx.currentTime); gain.gain.setValueAtTime(vol * 0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1); osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.1); } catch(e){} }
     function jumpTo(pos) { map.flyTo(pos, 1, { animate: true, duration: 1.2 }); updateStatus(`DÉPLOIEMENT : ZONE ${pos}`); }
     map.on('contextmenu', (e) => { alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]"); });
 
     function setInterMode(m) { interMode = m; ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active'); load(); }
-    function setType(t, b) { currentType = t; document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); pointsBuffer = []; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } if(interMode !== 'ADD' && interMode !== 'EDIT') setInterMode('ADD'); updateStatus(`OUTIL : ${t.toUpperCase()}`); }
+    function setType(t, b) { currentType = t; document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); pointsBuffer = []; pendingIconPos = null; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } if(interMode !== 'ADD' && interMode !== 'EDIT') setInterMode('ADD'); updateStatus(`OUTIL : ${t.toUpperCase()}`); }
     function updateSizePreview(val) { currentSize = val; document.getElementById('sizeVal').innerText = val + "px"; }
     function setColor(c, el) { currentColor = c; document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active')); el.classList.add('active'); if(drawingPolyline) drawingPolyline.setStyle({color: c}); }
 
@@ -187,7 +161,7 @@
                 const parts = p.label ? p.label.split('|') : [];
                 const color = parts[0] || '#00ff41';
                 const size = parseInt(parts[1]) || 40;
-                const rot = parts[3]; // La rotation est stockée en 4ème position
+                const rot = parts[3]; 
 
                 let layer;
                 if (p.type === 'text') { layer = L.marker([p.x, p.y], { icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${parts[2] || 'TEXTE'}</span>` })}); }
@@ -205,23 +179,58 @@
         } catch (e) {}
     }
 
-    map.on('mousemove', e => { if (drawingPolyline && pointsBuffer.length > 0) drawingPolyline.setLatLngs([pointsBuffer[pointsBuffer.length - 1], e.latlng]); });
-    
+    map.on('mousemove', e => { 
+        if (drawingPolyline && (pointsBuffer.length > 0 || pendingIconPos)) {
+            const start = pendingIconPos ? pendingIconPos : pointsBuffer[pointsBuffer.length - 1];
+            drawingPolyline.setLatLngs([start, e.latlng]);
+        }
+    });
+
     map.on('click', e => {
         if (interMode !== 'ADD') return;
         const pos = [e.latlng.lat, e.latlng.lng];
+
+        // --- LOGIQUE EN DEUX CLICS POUR LES ICÔNES ---
+        if (iconFiles[currentType] && currentType !== 'Dot') {
+            if (!pendingIconPos) {
+                // Premier clic : on pose l'ancre
+                pendingIconPos = pos;
+                updateStatus("ORIENTEZ L'UNITÉ (CLIC 2)...");
+                drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map);
+            } else {
+                // Deuxième clic : on calcule l'angle
+                const dx = e.latlng.lng - pendingIconPos[1];
+                const dy = e.latlng.lat - pendingIconPos[0];
+                let angle = Math.atan2(dx, dy) * (180 / Math.PI);
+                
+                // Si le clic est trop proche du premier, on considère qu'il n'y a pas de flèche
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const finalRot = dist < 5 ? "" : Math.round(angle);
+
+                save({ x: pendingIconPos[0], y: pendingIconPos[1], type: currentType, label: `${currentColor}|${currentSize}||${finalRot}` });
+                
+                pendingIconPos = null;
+                if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+            }
+            return;
+        }
+
+        // --- RESTE DES OUTILS (TEXTE, ZONE, etc.) ---
         if (currentType === 'text') {
             const txt = prompt("Texte :");
             if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${txt}` });
         } else if (['arrow', 'zone', 'zone4', 'circle'].includes(currentType)) {
             pointsBuffer.push(pos);
             let limit = (currentType === 'zone') ? 3 : (currentType === 'zone4' ? 4 : 2);
-            if (pointsBuffer.length === limit) { save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` }); pointsBuffer = []; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } }
-            else { if (!drawingPolyline) drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map); }
+            if (pointsBuffer.length === limit) {
+                save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` });
+                pointsBuffer = [];
+                if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+            } else { 
+                if (!drawingPolyline) drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map);
+            }
         } else {
-            // DEMANDE DE DIRECTION POUR LES ICONES
-            let rot = prompt("Direction (0-360) ?\n(Laissez vide pour aucune flèche)");
-            save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}||${rot || ''}` });
+            save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` });
         }
     });
 
@@ -237,9 +246,6 @@
             const newTxt = prompt("Modifier le texte :", oldText);
             if (newTxt === null) return;
             newLabel += `|${newTxt}`;
-        } else {
-            let rot = prompt("Modifier Direction (0-360) ?\n(Laissez vide pour aucune flèche)");
-            newLabel += `||${rot || ''}`;
         }
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
         save({ x: x, y: y, type: type, label: newLabel });
