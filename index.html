@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL | HD NATO STD</title>
+    <title>ALTIS COMMAND TERMINAL | HD LOCAL</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -51,8 +51,8 @@
         #map { flex-grow: 1; background: #000; cursor: crosshair; }
         .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; pointer-events: none; }
         
-        /* RENDU NET DES TUILES */
-        .leaflet-tile-container img {
+        /* NETTETÉ RENFORCÉE */
+        .leaflet-image-layer {
             image-rendering: -webkit-optimize-contrast;
             image-rendering: crisp-edges;
             image-rendering: pixelated;
@@ -66,7 +66,7 @@
 
 <div id="app">
     <div id="sidebar">
-        <div class="header">ALTIS HD</div>
+        <div class="header">ALTIS COM</div>
         
         <div class="section-label">MODE OPÉRATOIRE</div>
         <div class="mode-selector">
@@ -125,27 +125,19 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // CONFIGURATION CARTE HD
-    // Le CRS Simple est obligatoire pour Arma. On définit une grille de 256 unités par tuile.
+    // RETOUR AU CRS SIMPLE (FIABLE)
     const map = L.map('map', { 
         crs: L.CRS.Simple, 
-        minZoom: 0, 
-        maxZoom: 7, 
-        zoomControl: false,
-        attributionControl: false
+        minZoom: -3, 
+        maxZoom: 3, 
+        zoomControl: false 
     });
 
-    // L'URL officielle du projet Arma3Map
-    L.tileLayer('https://cache.arma3.io/map_altis/{z}/{x}/{y}.png', {
-        minZoom: 0,
-        maxZoom: 7,
-        tileSize: 256,
-        noWrap: true,
-        tms: false
-    }).addTo(map);
-
-    // Positionner la caméra au centre de l'île (coordonnées adaptées au TileLayer)
-    map.setView([-128, 128], 3);
+    // On utilise ton fichier altis.webp local
+    // On définit une zone large pour permettre un zoom net
+    const bounds = [[0, 0], [2048, 2048]];
+    L.imageOverlay('altis.webp', bounds).addTo(map);
+    map.fitBounds(bounds);
 
     let interMode = 'ADD';
     let currentType = 'Infantry';
