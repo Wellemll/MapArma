@@ -230,10 +230,13 @@
                 } else if (p.type === 'circle') {
                     const pts = JSON.parse(p.points_json);
                     const radius = Math.sqrt(Math.pow(pts[1][0] - pts[0][0], 2) + Math.pow(pts[1][1] - pts[0][1], 2));
-                    layer = L.circle(pts[0], { radius: radius, color: color, fillOpacity: 0.3 });
+                    // bubblingMouseEvents permet au clic de passer à travers pour poser une icone dessous
+                    layer = L.circle(pts[0], { radius: radius, color: color, fillOpacity: 0.3, bubblingMouseEvents: true });
                 } else if (p.points_json) {
                     const pts = JSON.parse(p.points_json);
-                    layer = (p.type.startsWith('zone')) ? L.polygon(pts, {color: color, fillOpacity: 0.3}) : L.polyline(pts, {color: color, weight: 4});
+                    layer = (p.type.startsWith('zone')) ? 
+                        L.polygon(pts, {color: color, fillOpacity: 0.3, bubblingMouseEvents: true}) : 
+                        L.polyline(pts, {color: color, weight: 4, bubblingMouseEvents: true});
                 } else if (p.type === 'Dot') {
                     layer = L.circleMarker([p.x, p.y], { radius: size / 6, color: color, fillColor: color, fillOpacity: 1 });
                 } else if (iconFiles[p.type]) {
@@ -243,9 +246,12 @@
 
                 if (layer) {
                     layer.on('click', (e) => {
-                        L.DomEvent.stopPropagation(e);
-                        if (interMode === 'DEL') del(p.id);
-                        else if (interMode === 'EDIT' && !p.points_json) updateExisting(p.id, p.x, p.y, p.type);
+                        // On ne bloque le clic que si on est en mode DEL ou EDIT
+                        if (interMode !== 'ADD') {
+                            L.DomEvent.stopPropagation(e);
+                            if (interMode === 'DEL') del(p.id);
+                            else if (interMode === 'EDIT' && !p.points_json) updateExisting(p.id, p.x, p.y, p.type);
+                        }
                     });
                     layer.addTo(map);
                     renderedMarkers[id] = layer;
