@@ -6,11 +6,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --primary: #00ff41; --blue: #00d2ff; --red: #ff3e3e; --orange: #ff9d00; --bg: #05070a; 
-        }
+        :root { --primary: #00ff41; --blue: #00d2ff; --red: #ff3e3e; --orange: #ff9d00; --bg: #05070a; }
         
-        /* Animation Radar Scan */
         #map::after {
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
             background: rgba(0, 255, 65, 0.1); box-shadow: 0 0 15px var(--primary);
@@ -26,11 +23,11 @@
             padding: 15px; display: flex; flex-direction: column; z-index: 1001; overflow-y: auto; 
         }
 
-        .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,255,65,0.3); }
+        .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px; }
         .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
         
         .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
-        .mode-btn { padding: 10px 2px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.6rem; font-weight: bold; border-radius: 4px; transition: 0.2s; text-align: center; }
+        .mode-btn { padding: 10px 2px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.6rem; font-weight: bold; border-radius: 4px; text-align: center; transition: 0.2s; }
         .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); }
         .mode-btn#btn-edit.active { border-color: var(--blue); color: var(--blue); background: rgba(0, 210, 255, 0.1); }
         .mode-btn.mode-del.active { border-color: var(--red); color: var(--red); background: rgba(255, 62, 62, 0.1); }
@@ -44,7 +41,6 @@
         .icon-btn .dot-preview { width: 12px; height: 12px; border-radius: 50%; background: white; margin: 10px 0 13px; }
         .icon-btn span { font-size: 0.55rem; color: #8892b0; text-align: center; font-weight: bold; }
         .icon-btn.active { border-color: var(--blue); background: rgba(0, 210, 255, 0.1); }
-        .icon-btn.active span { color: white; }
 
         .color-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 10px; }
         .color-dot { height: 25px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; }
@@ -57,8 +53,13 @@
         .btn-util { width: 100%; padding: 10px; margin-bottom: 4px; border: 1px solid #2a3544; background: rgba(255,255,255,0.02); color: #8892b0; cursor: pointer; font-size: 0.7rem; border-radius: 4px; text-align: left; }
         .btn-util.active { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
 
+        .audio-panel { margin-top: 10px; padding: 10px; border: 1px solid #1a222d; border-radius: 4px; background: rgba(0,0,0,0.4); }
+        .audio-row { display: flex; align-items: center; gap: 10px; }
+        .mute-btn { background: #111; border: 1px solid #333; color: #8892b0; cursor: pointer; font-size: 0.6rem; padding: 5px; border-radius: 3px; }
+        .mute-btn.active { color: var(--red); border-color: var(--red); }
+
         #map { flex-grow: 1; background: #000; cursor: crosshair; position: relative; }
-        .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; pointer-events: none; }
+        .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; }
         
         .leaflet-image-layer { image-rendering: crisp-edges; image-rendering: pixelated; }
         .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; font-size: 14px; white-space: nowrap; }
@@ -119,23 +120,30 @@
         <button class="btn-util" onclick="setType('circle', this)">◯ CERCLE (2 CLICS)</button>
         <button class="btn-util" onclick="setType('text', this)">📝 TEXTE TACTIQUE</button>
 
+        <div class="section-label">SYSTÈME AUDIO</div>
+        <div class="audio-panel">
+            <div class="audio-row">
+                <button id="mute-btn" class="mute-btn" onclick="toggleMute()">MUTE</button>
+                <input type="range" id="volSlider" min="0" max="1" step="0.1" value="0.5">
+            </div>
+        </div>
+
         <button class="clear-all" onclick="clearAll()">WIPE TERMINAL</button>
     </div>
     
     <div id="map"></div>
-    <div class="status-bar" id="status">TERMINAL PRÊT</div>
+    <div class="status-bar" id="status">LIAISON ÉTABLIE</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // --- INITIALISATION ---
     const map = L.map('map', { crs: L.CRS.Simple, minZoom: -3, maxZoom: 3, zoomControl: false });
     const bounds = [[0, 0], [1512, 2048]];
     L.imageOverlay('altis.webp', bounds).addTo(map);
     map.fitBounds(bounds);
 
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
-    let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0;
+    let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0, isMuted = false;
 
     const iconFiles = {
         'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
@@ -150,30 +158,29 @@
         'Dot': { isVector: true }
     };
 
-    // --- AUDIO ---
+    function toggleMute() { isMuted = !isMuted; document.getElementById('mute-btn').classList.toggle('active', isMuted); }
+    
     function playTacticalPing() {
+        if (isMuted) return;
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const vol = document.getElementById('volSlider').value;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'square'; osc.frequency.setValueAtTime(880, ctx.currentTime);
+            gain.gain.setValueAtTime(vol * 0.1, ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
             osc.connect(gain); gain.connect(ctx.destination);
             osc.start(); osc.stop(ctx.currentTime + 0.1);
         } catch(e){}
     }
 
-    // --- UI CONTROLS ---
-    function updateSizePreview(val) {
-        currentSize = val;
-        document.getElementById('sizeVal').innerText = val + "px";
-    }
+    function updateSizePreview(val) { currentSize = val; document.getElementById('sizeVal').innerText = val + "px"; }
 
     function setInterMode(m) {
         interMode = m;
         ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active'));
         document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active');
-        updateStatus(`MODE : ${m}`);
         load();
     }
 
@@ -194,36 +201,25 @@
 
     function updateStatus(t) { document.getElementById('status').innerText = t; }
 
-    // --- SYNC ENGINE (HIGH SPEED) ---
     async function load() {
         if (isSaving) return;
         try {
             const res = await fetch('/pings');
             const data = await res.json();
-            
             if (data.length > lastCount && lastCount !== 0) playTacticalPing();
             lastCount = data.length;
 
             const currentIds = data.map(p => p.id.toString());
-            
-            // Nettoyage des markers supprimés
             Object.keys(renderedMarkers).forEach(id => {
-                if (!currentIds.includes(id)) {
-                    map.removeLayer(renderedMarkers[id]);
-                    delete renderedMarkers[id];
-                }
+                if (!currentIds.includes(id)) { map.removeLayer(renderedMarkers[id]); delete renderedMarkers[id]; }
             });
 
-            // Ajout ou Mise à jour
             data.forEach(p => {
                 const id = p.id.toString();
-                
-                // Si le marker existe, on gère juste son interactivité
                 if (renderedMarkers[id]) {
                     renderedMarkers[id].options.interactive = (interMode !== 'ADD');
                     return;
                 }
-
                 const parts = p.label ? p.label.split('|') : [];
                 const color = parts[0] || '#00ff41';
                 const size = parseInt(parts[1]) || 40;
@@ -255,7 +251,7 @@
                     renderedMarkers[id] = layer;
                 }
             });
-        } catch (e) { console.error("Sync error"); }
+        } catch (e) {}
     }
 
     async function save(obj) {
@@ -267,21 +263,18 @@
     }
 
     async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
-    
-    async function clearAll() { if(confirm("TOUT EFFACER?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
+    async function clearAll() { if(confirm("WIPE?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
 
     async function updateExisting(id, x, y, type) {
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
         save({ x: x, y: y, type: type, label: `${currentColor}|${currentSize}` });
     }
 
-    // --- EVENTS ---
     map.on('click', e => {
         if (interMode !== 'ADD') return;
         const pos = [e.latlng.lat, e.latlng.lng];
-        
         if (currentType === 'text') {
-            const txt = prompt("Entrez votre texte :");
+            const txt = prompt("Texte :");
             if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${txt}` });
         } else if (['arrow', 'zone', 'zone4', 'circle'].includes(currentType)) {
             pointsBuffer.push(pos);
@@ -289,9 +282,7 @@
             if (pointsBuffer.length === limit) {
                 save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` });
                 pointsBuffer = [];
-            } else {
-                updateStatus(`CLIC ${pointsBuffer.length}/${limit}...`);
-            }
+            } else { updateStatus(`CLIC ${pointsBuffer.length}/${limit}...`); }
         } else {
             save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` });
         }
