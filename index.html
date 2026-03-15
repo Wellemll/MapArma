@@ -2,78 +2,32 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ALTIS COMMAND TERMINAL | HD NATO STD</title>
+    <title>ALTIS COMMAND TERMINAL | HIGH-SPEED</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --primary: #00ff41; 
-            --blue: #00d2ff; 
-            --red: #ff3e3e; 
-            --orange: #ff9d00; 
-            --bg: #05070a; 
-        }
-
-        /* Animations */
-        @keyframes scanning {
-            0% { top: 0%; }
-            100% { top: 100%; }
-        }
-
+        :root { --primary: #00ff41; --blue: #00d2ff; --red: #ff3e3e; --orange: #ff9d00; --bg: #05070a; }
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: 'JetBrains Mono', monospace; color: white; overflow: hidden; }
-        
         #app { display: flex; height: 100vh; }
-        
-        #sidebar { 
-            width: 280px; background: rgba(13, 17, 23, 0.98); border-right: 1px solid #1a222d; 
-            padding: 15px; display: flex; flex-direction: column; z-index: 1001; overflow-y: auto; 
-        }
-
-        .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,255,65,0.3); }
-        .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
-        
+        #sidebar { width: 280px; background: rgba(13, 17, 23, 0.98); border-right: 1px solid #1a222d; padding: 15px; display: flex; flex-direction: column; z-index: 1001; overflow-y: auto; }
+        .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px; }
+        .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; }
         .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
-        .mode-btn { padding: 10px 2px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.6rem; font-weight: bold; border-radius: 4px; transition: 0.2s; text-align: center; }
+        .mode-btn { padding: 10px 2px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.6rem; font-weight: bold; border-radius: 4px; }
         .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); }
-        .mode-btn#btn-edit.active { border-color: var(--blue); color: var(--blue); background: rgba(0, 210, 255, 0.1); }
-        .mode-btn.mode-del.active { border-color: var(--red); color: var(--red); background: rgba(255, 62, 62, 0.1); }
-
-        .grid-icons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
-        .icon-btn { 
-            background: rgba(255,255,255,0.03); border: 1px solid #2a3544; padding: 8px; 
-            border-radius: 4px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center;
-        }
-        .icon-btn img { width: 30px; height: auto; margin-bottom: 5px; pointer-events: none; }
-        .icon-btn .dot-preview { width: 12px; height: 12px; border-radius: 50%; background: white; margin: 10px 0 13px; }
-        .icon-btn span { font-size: 0.55rem; color: #8892b0; text-align: center; font-weight: bold; }
+        .grid-icons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .icon-btn { background: rgba(255,255,255,0.03); border: 1px solid #2a3544; padding: 8px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; transition: 0.1s; }
         .icon-btn.active { border-color: var(--blue); background: rgba(0, 210, 255, 0.1); }
-        .icon-btn.active span { color: white; }
-
-        .color-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 10px; }
+        .icon-btn img { width: 30px; height: auto; margin-bottom: 5px; }
+        .icon-btn span { font-size: 0.55rem; color: #8892b0; }
+        .color-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
         .color-dot { height: 25px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; }
         .color-dot.active { border-color: white; transform: scale(1.1); }
-
-        .slider-container { padding: 5px 0; margin-bottom: 10px; }
-        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--primary); }
-        .size-preview { font-size: 0.6rem; color: var(--primary); text-align: right; }
-
-        .btn-util { width: 100%; padding: 10px; margin-bottom: 4px; border: 1px solid #2a3544; background: rgba(255,255,255,0.02); color: #8892b0; cursor: pointer; font-size: 0.7rem; border-radius: 4px; text-align: left; }
-        .btn-util.active { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
-
-        #map { flex-grow: 1; background: #000; cursor: crosshair; position: relative; }
-        #map::after {
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: rgba(0, 255, 65, 0.1); box-shadow: 0 0 15px var(--primary);
-            z-index: 1000; pointer-events: none; animation: scanning 8s linear infinite;
-        }
-
-        .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; pointer-events: none; }
-        
-        .leaflet-image-layer { image-rendering: crisp-edges; image-rendering: pixelated; }
-        .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; font-size: 14px; white-space: nowrap; }
-        .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 8px; cursor: pointer; font-size: 0.6rem; opacity: 0.7; transition: 0.3s; }
-        .clear-all:hover { background: var(--red); color: white; opacity: 1; }
+        #map { flex-grow: 1; background: #000; cursor: crosshair; }
+        .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; }
+        .btn-util { width: 100%; padding: 8px; margin-bottom: 4px; border: 1px solid #2a3544; background: rgba(255,255,255,0.02); color: #8892b0; cursor: pointer; font-size: 0.7rem; text-align: left; }
+        .btn-util.active { border-color: white; color: white; }
+        .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 8px; cursor: pointer; font-size: 0.6rem; }
     </style>
 </head>
 <body>
@@ -82,130 +36,76 @@
     <div id="sidebar">
         <div class="header">ALTIS COM</div>
         
-        <div class="section-label">MODE OPÉRATOIRE</div>
+        <div class="section-label">MODE</div>
         <div class="mode-selector">
             <button id="btn-add" class="mode-btn active" onclick="setInterMode('ADD')">AJOUTER</button>
             <button id="btn-edit" class="mode-btn" onclick="setInterMode('EDIT')">ÉDITER</button>
-            <button id="btn-del" class="mode-btn mode-del" onclick="setInterMode('DEL')">SUPPRIMER</button>
+            <button id="btn-del" class="mode-btn" onclick="setInterMode('DEL')">SUPPR</button>
         </div>
 
-        <div class="section-label">UNITÉS & COMBAT</div>
-        <div class="grid-icons">
+        <div class="section-label">UNITÉS</div>
+        <div class="grid-icons" id="unit-grid">
             <button class="icon-btn active" onclick="setType('Infantry', this)"><img src="Icons/Infantry.png"><span>INFANTERIE</span></button>
             <button class="icon-btn" onclick="setType('Vehicule', this)"><img src="Icons/Vehicule.png"><span>VHC LÉGER</span></button>
-            <button class="icon-btn" onclick="setType('HeavyArmor', this)"><img src="Icons/HeavyArmor.png"><span>BLINDÉ LOURD</span></button>
-            <button class="icon-btn" onclick="setType('Attackhelicopter', this)"><img src="Icons/Attackhelicopter.png"><span>HÉLICO ATT.</span></button>
-            <button class="icon-btn" onclick="setType('Dead', this)"><img src="Icons/Dead.png"><span>DANGER / KIA</span></button>
-            <button class="icon-btn" onclick="setType('Dot', this)"><div class="dot-preview"></div><span>POINT TACT.</span></button>
+            <button class="icon-btn" onclick="setType('HeavyArmor', this)"><img src="Icons/HeavyArmor.png"><span>BLINDÉ</span></button>
+            <button class="icon-btn" onclick="setType('Attackhelicopter', this)"><img src="Icons/Attackhelicopter.png"><span>HÉLICO</span></button>
+            <button class="icon-btn" onclick="setType('Dead', this)"><img src="Icons/Dead.png"><span>KIA</span></button>
+            <button class="icon-btn" onclick="setType('Dot', this)"><div style="width:10px;height:10px;background:white;border-radius:50%;margin:10px;"></div><span>POINT</span></button>
         </div>
 
-        <div class="section-label">SUPPORT & MINES</div>
-        <div class="grid-icons">
-            <button class="icon-btn" onclick="setType('Mine', this)"><img src="Icons/Mine.png"><span>MINE TACT.</span></button>
-            <button class="icon-btn" onclick="setType('Artillery', this)"><img src="Icons/Artillery.png"><span>ARTILLERIE</span></button>
-            <button class="icon-btn" onclick="setType('Airdefense', this)"><img src="Icons/Airdefense.png"><span>DÉFENSE AIR</span></button>
-            <button class="icon-btn" onclick="setType('Armourwheeled', this)"><img src="Icons/Armourwheeled.png"><span>BLINDÉ LÉGER</span></button>
-        </div>
-
-        <div class="section-label">DIMENSION DES ICÔNES</div>
-        <div class="slider-container">
-            <input type="range" id="sizeSlider" min="20" max="100" value="40" oninput="updateSizePreview(this.value)">
-            <div class="size-preview" id="sizeVal">40px</div>
-        </div>
-
-        <div class="section-label">COULEUR TACTIQUE</div>
+        <div class="section-label">COULEUR</div>
         <div class="color-picker">
             <div class="color-dot active" style="background: var(--primary);" onclick="setColor('#00ff41', this)"></div>
             <div class="color-dot" style="background: var(--blue);" onclick="setColor('#00d2ff', this)"></div>
             <div class="color-dot" style="background: var(--red);" onclick="setColor('#ff3e3e', this)"></div>
             <div class="color-dot" style="background: var(--orange);" onclick="setColor('#ff9d00', this)"></div>
             <div class="color-dot" style="background: #ffffff;" onclick="setColor('#ffffff', this)"></div>
-            <div class="color-dot" style="background: #000000; border: 1px solid #333;" onclick="setColor('#000000', this)"></div>
         </div>
 
-        <div class="section-label">OUTILS SPÉCIAUX</div>
+        <div class="section-label">OUTILS</div>
         <button class="btn-util" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
-        <button class="btn-util" onclick="setType('zone', this)">⬢ ZONE (3 CLICS)</button>
-        <button class="btn-util" onclick="setType('zone4', this)">⬢ ZONE (4 CLICS)</button>
-        <button class="btn-util" onclick="setType('circle', this)">◯ CERCLE (2 CLICS)</button>
-        <button class="btn-util" onclick="setType('text', this)">📝 TEXTE TACTIQUE</button>
+        <button class="btn-util" onclick="setType('zone', this)">⬢ ZONE (3+ CLICS)</button>
+        <button class="btn-util" onclick="setType('text', this)">📝 TEXTE</button>
 
         <button class="clear-all" onclick="clearAll()">WIPE TERMINAL</button>
     </div>
-    
     <div id="map"></div>
-    <div class="status-bar" id="status">TERMINAL PRÊT</div>
+    <div class="status-bar" id="status">LIAISON ÉTABLIE</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // --- CONFIGURATION & ÉTAT ---
-    const map = L.map('map', { 
-        crs: L.CRS.Simple, 
-        minZoom: -3, 
-        maxZoom: 3, 
-        zoomControl: false 
-    });
-
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 3, zoomControl: false });
     const bounds = [[0, 0], [1512, 2048]];
     L.imageOverlay('altis.webp', bounds).addTo(map);
     map.fitBounds(bounds);
 
-    let interMode = 'ADD';
-    let currentType = 'Infantry';
-    let currentColor = '#00ff41';
-    let currentSize = 40;
-    let pointsBuffer = [];
-    let lastCount = 0;
-    let isSaving = false;
+    let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
+    let pointsBuffer = [], renderedMarkers = {}, isSaving = false;
 
     const iconFiles = {
         'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
         'Vehicule': { blue: 'Icons/Vehicule.png', red: 'Icons/Vehicule2.png' },
         'HeavyArmor': { blue: 'Icons/HeavyArmor.png', red: 'Icons/HeavyArmor2.png' },
-        'Armourwheeled': { blue: 'Icons/Armourwheeled.png', red: 'Icons/Armourwheeled2.png' },
-        'Artillery': { blue: 'Icons/Artillery.png', red: 'Icons/Artillery2.png' },
-        'Airdefense': { blue: 'Icons/Airdefense.png', red: 'Icons/Airdefense2.png' },
         'Attackhelicopter': { blue: 'Icons/Attackhelicopter.png', red: 'Icons/Attackhelicopter2.png' },
-        'Mine': { blue: 'Icons/Mine.png', red: 'Icons/Mine2.png' },
-        'Dead': { any: 'Icons/Dead.png' },
-        'Dot': { isVector: true }
+        'Dead': { any: 'Icons/Dead.png' }
     };
 
-    // --- AUDIO TACTIQUE ---
-    function playTacticalPing() {
-        try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            function beep(freq, duration, start) {
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.type = 'square';
-                oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + start);
-                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + start);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + start + duration);
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                oscillator.start(audioCtx.currentTime + start);
-                oscillator.stop(audioCtx.currentTime + start + duration);
-            }
-            beep(880, 0.1, 0);
-            beep(1200, 0.08, 0.12);
-        } catch(e) { console.warn("Audio blocked by browser"); }
-    }
-
-    // --- LOGIQUE INTERFACE ---
-    function updateSizePreview(val) {
-        currentSize = val;
-        document.getElementById('sizeVal').innerText = val + "px";
-    }
+    function updateStatus(t) { document.getElementById('status').innerText = t; }
 
     function setInterMode(m) {
         interMode = m;
-        document.getElementById('btn-add').classList.toggle('active', m === 'ADD');
-        document.getElementById('btn-edit').classList.toggle('active', m === 'EDIT');
-        document.getElementById('btn-del').classList.toggle('active', m === 'DEL');
-        load();
-        updateStatus(`MODE : ${m}`);
+        ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active'));
+        document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active');
+        load(); // Re-render pour activer/désactiver l'interactivité
+    }
+
+    function setType(t, b) {
+        currentType = t;
+        document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active'));
+        b.classList.add('active');
+        pointsBuffer = [];
+        updateStatus(`OUTIL : ${t.toUpperCase()}`);
     }
 
     function setColor(c, el) {
@@ -214,148 +114,101 @@
         el.classList.add('active');
     }
 
-    function setType(t, b) {
-        currentType = t;
-        document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active'));
-        b.classList.add('active');
-        pointsBuffer = [];
-        if(interMode !== 'ADD') setInterMode('ADD');
-        updateStatus(`OUTIL : ${t}`);
-    }
-
-    function updateStatus(t) {
-        document.getElementById('status').innerText = t;
-    }
-
-    // --- SYNC DONNÉES ---
+    // --- SYNC RAPIDE ---
     async function load() {
         if (isSaving) return;
         try {
             const res = await fetch('/pings');
             const data = await res.json();
             
-            // Son si nouveau ping détecté
-            if (data.length > lastCount && lastCount !== 0) {
-                playTacticalPing();
-            }
-            lastCount = data.length;
-
-            // Nettoyage carte
-            map.eachLayer(l => { 
-                if ((l instanceof L.Marker || l instanceof L.CircleMarker || l instanceof L.Polyline || l instanceof L.Polygon || l instanceof L.Circle) && !l._url) {
-                    map.removeLayer(l); 
+            const currentIds = data.map(p => p.id.toString());
+            
+            // 1. Supprimer ce qui n'existe plus
+            Object.keys(renderedMarkers).forEach(id => {
+                if (!currentIds.includes(id)) {
+                    map.removeLayer(renderedMarkers[id]);
+                    delete renderedMarkers[id];
                 }
             });
 
-            // Rendu des pings
+            // 2. Ajouter/Mettre à jour
             data.forEach(p => {
+                const id = p.id.toString();
+                // Si le marker existe déjà, on ne fait rien (sauf si mode Edit change)
+                if (renderedMarkers[id]) {
+                    renderedMarkers[id].options.interactive = (interMode !== 'ADD');
+                    return;
+                }
+
                 const parts = p.label ? p.label.split('|') : [];
-                const color = (parts[0] && parts[0].startsWith('#')) ? parts[0] : '#00ff41';
-                const size = parts[1] ? parseInt(parts[1]) : 40;
+                const color = parts[0] || '#00ff41';
+                const size = parseInt(parts[1]) || 40;
                 let layer;
 
                 if (p.type === 'text') {
-                    layer = L.marker([p.x, p.y], {
-                        icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${parts[2] || 'TEXTE'}</span>` })
-                    });
-                } else if (p.type === 'circle') {
-                    const pts = JSON.parse(p.points_json);
-                    const radius = Math.sqrt(Math.pow(pts[1][0] - pts[0][0], 2) + Math.pow(pts[1][1] - pts[0][1], 2));
-                    layer = L.circle(pts[0], { radius: radius, color: color, fillOpacity: 0.3 });
+                    layer = L.marker([p.x, p.y], { icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${parts[2]}</span>` })});
                 } else if (p.points_json) {
                     const pts = JSON.parse(p.points_json);
-                    layer = (p.type.startsWith('zone')) ? L.polygon(pts, {color: color, fillOpacity: 0.3}) : L.polyline(pts, {color: color, weight: 4});
+                    layer = (p.type === 'zone') ? L.polygon(pts, {color: color, fillOpacity: 0.3}) : L.polyline(pts, {color: color, weight: 4});
                 } else if (p.type === 'Dot') {
-                    layer = L.circleMarker([p.x, p.y], { radius: size / 6, color: color, fillColor: color, fillOpacity: 1, weight: 2 });
+                    layer = L.circleMarker([p.x, p.y], { radius: 6, color: color, fillColor: color, fillOpacity: 1 });
                 } else if (iconFiles[p.type]) {
-                    const isRed = (color === '#ff3e3e');
-                    let imgPath = iconFiles[p.type].any ? iconFiles[p.type].any : (isRed ? iconFiles[p.type].red : iconFiles[p.type].blue);
-                    layer = L.marker([p.x, p.y], {
-                        icon: L.icon({ iconUrl: imgPath, iconSize: [size, (size * 0.75)], iconAnchor: [(size/2), (size*0.75/2)] })
-                    });
+                    const img = iconFiles[p.type].any || (color === '#ff3e3e' ? iconFiles[p.type].red : iconFiles[p.type].blue);
+                    layer = L.marker([p.x, p.y], { icon: L.icon({ iconUrl: img, iconSize: [size, size*0.75] }) });
                 }
 
                 if (layer) {
-                    if (interMode !== 'ADD') {
-                        layer.options.interactive = true;
-                        layer.on('click', (e) => { 
-                            L.DomEvent.stopPropagation(e); 
-                            if (interMode === 'DEL') del(p.id); 
-                            else if (interMode === 'EDIT' && !p.points_json) updateExisting(p.id, p.x, p.y, p.type);
-                        });
-                    } else {
-                        layer.options.interactive = false;
-                    }
+                    layer.on('click', (e) => {
+                        L.DomEvent.stopPropagation(e);
+                        if (interMode === 'DEL') del(p.id);
+                    });
                     layer.addTo(map);
+                    renderedMarkers[id] = layer;
                 }
             });
-        } catch (e) { console.error("Sync Error", e); }
+        } catch (e) { console.error("Sync error"); }
     }
 
     async function save(obj) {
         isSaving = true;
-        updateStatus("TRANSMISSION...");
-        try {
-            const response = await fetch('/pings', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(obj) 
-            });
-            if (response.ok) {
-                playTacticalPing();
-                updateStatus("DONNÉES TRANSMISES");
-            }
-        } catch (e) {
-            updateStatus("ERREUR DE LIAISON");
-        } finally {
+        updateStatus("SYNC...");
+        const res = await fetch('/pings', { method: 'POST', body: JSON.stringify(obj) });
+        if (res.ok) {
+            updateStatus("OK");
             isSaving = false;
-            load();
+            await load(); 
         }
     }
 
-    async function del(id) { 
-        await fetch(`/pings?id=${id}`, { method: 'DELETE' }); 
-        load(); 
+    async function del(id) {
+        await fetch(`/pings?id=${id}`, { method: 'DELETE' });
+        load();
     }
 
     async function clearAll() {
-        if(confirm("WIPE TERMINAL : Confirmer la suppression totale ?")) { 
-            await fetch('/pings?id=all', { method: 'DELETE' }); 
-            load(); 
-        } 
+        if(confirm("WIPE?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); }
     }
 
-    async function updateExisting(id, x, y, type) {
-        updateStatus("MISE À JOUR...");
-        await fetch(`/pings?id=${id}`, { method: 'DELETE' });
-        await save({ x: x, y: y, type: type, label: `${currentColor}|${currentSize}` });
-    }
-
-    // --- ÉVÉNEMENTS CARTE ---
     map.on('click', e => {
         if (interMode !== 'ADD') return;
         const pos = [e.latlng.lat, e.latlng.lng];
-        
         if (currentType === 'text') {
-            const txt = prompt("Entrez votre texte :");
-            if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${txt}` });
-        } else if (['arrow', 'zone', 'zone4', 'circle'].includes(currentType)) {
+            const t = prompt("Texte:");
+            if(t) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${t}` });
+        } else if (['arrow', 'zone'].includes(currentType)) {
             pointsBuffer.push(pos);
-            let limit = (currentType === 'zone') ? 3 : (currentType === 'zone4' ? 4 : 2);
-            if (pointsBuffer.length === limit) {
-                save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` });
-                pointsBuffer = [];
-            } else {
-                updateStatus(`CLIC ${pointsBuffer.length}/${limit}...`);
+            if (pointsBuffer.length >= (currentType === 'arrow' ? 2 : 3)) {
+                if(currentType === 'arrow' || confirm("Terminer la zone ?")) {
+                    save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` });
+                    pointsBuffer = [];
+                }
             }
         } else {
             save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` });
         }
     });
 
-    // Initialisation
-    load();
-    setInterval(load, 4000);
+    setInterval(load, 1000); // 1 seconde pour une sensation de direct
 </script>
 </body>
 </html>
