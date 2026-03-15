@@ -51,10 +51,11 @@
         #map { flex-grow: 1; background: #000; cursor: crosshair; }
         .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; pointer-events: none; }
         
-        /* CORRECTIF NETTETÉ CARTE */
+        /* RENDU NET DES TUILES */
         .leaflet-tile-container img {
-            image-rendering: pixelated;
+            image-rendering: -webkit-optimize-contrast;
             image-rendering: crisp-edges;
+            image-rendering: pixelated;
         }
 
         .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; font-size: 14px; white-space: nowrap; }
@@ -124,7 +125,8 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // INITIALISATION HD
+    // CONFIGURATION CARTE HD
+    // Le CRS Simple est obligatoire pour Arma. On définit une grille de 256 unités par tuile.
     const map = L.map('map', { 
         crs: L.CRS.Simple, 
         minZoom: 0, 
@@ -133,17 +135,17 @@
         attributionControl: false
     });
 
-    // Configuration des Tuiles HD d'Altis
-    const mapSize = 30720; // Taille simulée pour coller aux tuiles
+    // L'URL officielle du projet Arma3Map
     L.tileLayer('https://cache.arma3.io/map_altis/{z}/{x}/{y}.png', {
         minZoom: 0,
         maxZoom: 7,
         tileSize: 256,
         noWrap: true,
-        bounds: [[0, 0], [-mapSize / 100, mapSize / 100]] 
+        tms: false
     }).addTo(map);
 
-    map.setView([-150, 150], 2);
+    // Positionner la caméra au centre de l'île (coordonnées adaptées au TileLayer)
+    map.setView([-128, 128], 3);
 
     let interMode = 'ADD';
     let currentType = 'Infantry';
@@ -198,7 +200,9 @@
     async function load() {
         const res = await fetch('/pings');
         const data = await res.json();
-        map.eachLayer(l => { if ((l instanceof L.Marker || l instanceof L.CircleMarker || l instanceof L.Polyline || l instanceof L.Polygon || l instanceof L.Circle) && !l._url) map.removeLayer(l); });
+        map.eachLayer(l => { 
+            if ((l instanceof L.Marker || l instanceof L.CircleMarker || l instanceof L.Polyline || l instanceof L.Polygon || l instanceof L.Circle) && !l._url) map.removeLayer(l); 
+        });
 
         data.forEach(p => {
             const parts = p.label ? p.label.split('|') : [];
@@ -238,7 +242,7 @@
                     else if (interMode === 'EDIT' && !p.points_json) updateExisting(p.id, p.x, p.y, p.type);
                 });
             }
-            layer.addTo(map);
+            if (layer) layer.addTo(map);
         });
     }
 
@@ -264,14 +268,14 @@
     });
 
     async function updateExisting(id, x, y, type) {
-        updateStatus("MISE À JOUR UNITÉ...");
+        updateStatus("MISE À JOUR...");
         await fetch(`/pings?id=${id}`, { method: 'DELETE' });
         await save({ x: x, y: y, type: type, label: `${currentColor}|${currentSize}` });
     }
 
     async function save(obj) { await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) }); load(); }
     async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
-    async function clearAll() { if(confirm("EFFACER TOUTE LA CARTE ?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
+    async function clearAll() { if(confirm("WIPE MAP?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
 
     load();
     setInterval(load, 4000);
