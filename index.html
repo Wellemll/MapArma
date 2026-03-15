@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL | HD LOCAL</title>
+    <title>ALTIS COMMAND TERMINAL | HD NATO STD</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -125,7 +125,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // RETOUR AU CRS SIMPLE (FIABLE)
+    // INITIALISATION AVEC RATIO CORRIGÉ
     const map = L.map('map', { 
         crs: L.CRS.Simple, 
         minZoom: -3, 
@@ -133,9 +133,8 @@
         zoomControl: false 
     });
 
-    // On utilise ton fichier altis.webp local
-    // On définit une zone large pour permettre un zoom net
-    const bounds = [[0, 0], [2048, 2048]];
+    // On utilise 1512 pour Y et 2048 pour X pour stopper l'étirement
+    const bounds = [[0, 0], [1512, 2048]];
     L.imageOverlay('altis.webp', bounds).addTo(map);
     map.fitBounds(bounds);
 
@@ -267,7 +266,7 @@
 
     async function save(obj) { await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) }); load(); }
     async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
-    async function clearAll() { if(confirm("WIPE MAP?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
+    async function clearAll() { if(confirm("TOUT EFFACER?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
 
     load();
     setInterval(load, 4000);
