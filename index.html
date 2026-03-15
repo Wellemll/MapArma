@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL | NATO STD</title>
+    <title>ALTIS COMMAND TERMINAL | HD NATO STD</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -51,6 +51,12 @@
         #map { flex-grow: 1; background: #000; cursor: crosshair; }
         .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; pointer-events: none; }
         
+        /* CORRECTIF NETTETÉ CARTE */
+        .leaflet-tile-container img {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
         .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; font-size: 14px; white-space: nowrap; }
         .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 8px; cursor: pointer; font-size: 0.6rem; opacity: 0.5; }
     </style>
@@ -59,7 +65,7 @@
 
 <div id="app">
     <div id="sidebar">
-        <div class="header">ALTIS COM</div>
+        <div class="header">ALTIS HD</div>
         
         <div class="section-label">MODE OPÉRATOIRE</div>
         <div class="mode-selector">
@@ -118,9 +124,26 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomControl: false });
-    L.imageOverlay('altis.webp', [[0, 0], [1512, 2048]]).addTo(map);
-    map.fitBounds([[0, 0], [1512, 2048]]);
+    // INITIALISATION HD
+    const map = L.map('map', { 
+        crs: L.CRS.Simple, 
+        minZoom: 0, 
+        maxZoom: 7, 
+        zoomControl: false,
+        attributionControl: false
+    });
+
+    // Configuration des Tuiles HD d'Altis
+    const mapSize = 30720; // Taille simulée pour coller aux tuiles
+    L.tileLayer('https://cache.arma3.io/map_altis/{z}/{x}/{y}.png', {
+        minZoom: 0,
+        maxZoom: 7,
+        tileSize: 256,
+        noWrap: true,
+        bounds: [[0, 0], [-mapSize / 100, mapSize / 100]] 
+    }).addTo(map);
+
+    map.setView([-150, 150], 2);
 
     let interMode = 'ADD';
     let currentType = 'Infantry';
