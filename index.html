@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL | HD NATO STD</title>
+    <title>ALTIS COMMAND TERMINAL | DIRECTIONAL OPS</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -13,31 +13,32 @@
         #app { display: flex; height: 100vh; }
         #sidebar { width: 280px; background: linear-gradient(135deg, #10141d 0%, #05070a 100%); border-right: 4px solid #1a222d; border-image: linear-gradient(to bottom, #2a3544, #10141d) 1 100%; padding: 15px; display: flex; flex-direction: column; z-index: 1001; overflow-y: auto; box-shadow: inset -10px 0 20px rgba(0,0,0,0.8); }
         .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px; text-shadow: 0 0 8px var(--primary); animation: glitch 4s infinite; }
-        @keyframes glitch { 0% { transform: translate(0); } 2% { transform: translate(2px, -1px); text-shadow: 2px 0 var(--red), -2px 0 var(--blue); opacity: 0.8; } 4% { transform: translate(-2px, 1px); text-shadow: -2px 0 var(--red), 2px 0 var(--blue); opacity: 1; } 100% { transform: translate(0); } }
+        @keyframes glitch { 0% { transform: translate(0); } 2% { transform: translate(2px, -1px); text-shadow: 2px 0 var(--red), -2px 0 var(--blue); opacity: 0.8; } 100% { transform: translate(0); } }
         .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
         .bookmark-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 10px; }
         .btn-jump { background: #111; border: 1px solid #333; color: #8892b0; font-size: 0.62rem; padding: 6px 2px; cursor: pointer; border-radius: 3px; font-weight: bold; transition: 0.2s; text-align: center; }
         .btn-jump:hover { border-color: var(--blue); color: white; background: rgba(0, 210, 255, 0.1); }
         .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
         .mode-btn { padding: 10px 2px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.6rem; font-weight: bold; border-radius: 4px; text-align: center; transition: 0.2s; }
-        .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); box-shadow: 0 0 8px var(--primary); }
+        .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); }
         .grid-icons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
-        .icon-btn { background: rgba(255,255,255,0.03); border: 1px solid #2a3544; padding: 8px; border-radius: 4px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; }
-        .icon-btn img { width: 30px; height: auto; margin-bottom: 5px; filter: drop-shadow(0 0 2px black); }
-        .icon-btn span { font-size: 0.55rem; color: #8892b0; text-align: center; font-weight: bold; }
-        .icon-btn.active { border-color: var(--blue); background: rgba(0, 210, 255, 0.1); box-shadow: 0 0 10px rgba(0, 210, 255, 0.3); }
+        .icon-btn { background: rgba(255,255,255,0.03); border: 1px solid #2a3544; padding: 8px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+        .icon-btn img { width: 30px; height: auto; margin-bottom: 5px; }
+        .icon-btn.active { border-color: var(--blue); background: rgba(0, 210, 255, 0.1); }
         .color-dot { height: 25px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
-        .color-dot.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 10px white; }
-        .audio-panel { margin-top: 10px; padding: 10px; border: 1px solid #1a222d; border-radius: 4px; background: rgba(0,0,0,0.4); box-shadow: inset 0 0 10px black; }
-        .mute-btn { background: #111; border: 1px solid #333; cursor: pointer; font-size: 1.1rem; padding: 2px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: 0.2s; min-width: 45px; color: white; }
+        .color-dot.active { border-color: white; transform: scale(1.1); }
+        .audio-panel { margin-top: 10px; padding: 10px; border: 1px solid #1a222d; border-radius: 4px; background: rgba(0,0,0,0.4); }
+        .mute-btn { background: #111; border: 1px solid #333; cursor: pointer; font-size: 1.1rem; padding: 2px 8px; border-radius: 4px; color: white; }
         .mute-btn.active { border-color: var(--red); color: var(--red); }
         #map { flex-grow: 1; background: #000; cursor: crosshair; position: relative; }
-        .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; text-shadow: 0 0 5px var(--primary); }
-        .leaflet-image-layer { image-rendering: crisp-edges; image-rendering: pixelated; filter: brightness(1) contrast(1); }
-        .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 2px 2px 2px black; font-size: 14px; white-space: nowrap; }
+        .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; }
         .btn-util { width: 100%; padding: 10px; margin-bottom: 4px; border: 1px solid #2a3544; background: rgba(255,255,255,0.02); color: #8892b0; cursor: pointer; font-size: 0.7rem; border-radius: 4px; text-align: left; }
         .btn-util.active { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
-        .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 8px; cursor: pointer; font-size: 0.6rem; opacity: 0.7; }
+        
+        /* Rotation Slider HUD */
+        .rotation-control { background: rgba(0,0,0,0.5); padding: 10px; border-radius: 4px; border: 1px solid #333; margin-bottom: 10px; }
+        .rot-preview { display: flex; justify-content: center; margin-bottom: 5px; }
+        .rot-arrow { font-size: 1.5rem; color: var(--primary); transition: transform 0.1s; }
     </style>
 </head>
 <body>
@@ -45,6 +46,7 @@
 <div id="app">
     <div id="sidebar">
         <div class="header">ALTIS COM</div>
+        
         <div class="section-label">SIGNETS TACTIQUES</div>
         <div class="bookmark-grid">
             <button class="btn-jump" onclick="jumpTo([596, 202])">KAVALA</button>
@@ -54,32 +56,33 @@
             <button class="btn-jump" onclick="jumpTo([1169, 1719])">SOFIA</button>
             <button class="btn-jump" onclick="jumpTo([587, 1744])">AGIA MARINA</button>
         </div>
-        <div class="section-label">MODE OPÉRATOIRE</div>
-        <div class="mode-selector">
-            <button id="btn-add" class="mode-btn active" onclick="setInterMode('ADD')">AJOUTER</button>
-            <button id="btn-edit" class="mode-btn" onclick="setInterMode('EDIT')">ÉDITER</button>
-            <button id="btn-del" class="mode-btn mode-del" onclick="setInterMode('DEL')">SUPPRIMER</button>
+
+        <div class="section-label">ORIENTATION UNITÉ</div>
+        <div class="rotation-control">
+            <div class="rot-preview"><span id="arrow-ui" class="rot-arrow">↑</span></div>
+            <input type="range" id="rotSlider" min="0" max="360" value="0" step="45" oninput="updateRotation(this.value)" style="width:100%">
+            <div id="rotVal" style="font-size:0.6rem; text-align:center; color:var(--primary)">0° (NORD)</div>
         </div>
-        <div class="section-label">UNITÉS & COMBAT</div>
+
+        <div class="section-label">UNITÉS</div>
         <div class="grid-icons">
             <button class="icon-btn active" onclick="setType('Infantry', this)"><img src="Icons/Infantry.png"><span>INFANTERIE</span></button>
             <button class="icon-btn" onclick="setType('Vehicule', this)"><img src="Icons/Vehicule.png"><span>VHC LÉGER</span></button>
             <button class="icon-btn" onclick="setType('HeavyArmor', this)"><img src="Icons/HeavyArmor.png"><span>BLINDÉ LOURD</span></button>
             <button class="icon-btn" onclick="setType('Attackhelicopter', this)"><img src="Icons/Attackhelicopter.png"><span>HÉLICO ATT.</span></button>
-            <button class="icon-btn" onclick="setType('Dead', this)"><img src="Icons/Dead.png"><span>DANGER / KIA</span></button>
+            <button class="icon-btn" onclick="setType('Dead', this)"><img src="Icons/Dead.png"><span>KIA</span></button>
             <button class="icon-btn" onclick="setType('Dot', this)"><div style="width:12px; height:12px; border-radius:50%; background:white; margin-bottom:5px;"></div><span>POINT TACT.</span></button>
         </div>
+
         <div class="section-label">SUPPORT & MINES</div>
         <div class="grid-icons">
-            <button class="icon-btn" onclick="setType('Mine', this)"><img src="Icons/Mine.png"><span>MINE TACT.</span></button>
+            <button class="icon-btn" onclick="setType('Mine', this)"><img src="Icons/Mine.png"><span>MINE</span></button>
             <button class="icon-btn" onclick="setType('Artillery', this)"><img src="Icons/Artillery.png"><span>ARTILLERIE</span></button>
             <button class="icon-btn" onclick="setType('Airdefense', this)"><img src="Icons/Airdefense.png"><span>DÉFENSE AIR</span></button>
             <button class="icon-btn" onclick="setType('Armourwheeled', this)"><img src="Icons/Armourwheeled.png"><span>BLINDÉ LÉGER</span></button>
         </div>
-        <div class="section-label">DIMENSION</div>
-        <input type="range" id="sizeSlider" min="20" max="100" value="40" oninput="updateSizePreview(this.value)">
-        <div id="sizeVal" style="font-size:0.6rem; text-align:right">40px</div>
-        <div class="section-label">COULEUR TACTIQUE</div>
+
+        <div class="section-label">COULEUR</div>
         <div class="color-picker" style="display:grid; grid-template-columns:repeat(6, 1fr); gap:4px">
             <div class="color-dot active" style="background: var(--primary);" onclick="setColor('#00ff41', this)"></div>
             <div class="color-dot" style="background: var(--blue);" onclick="setColor('#00d2ff', this)"></div>
@@ -88,20 +91,16 @@
             <div class="color-dot" style="background: #ffffff;" onclick="setColor('#ffffff', this)"></div>
             <div class="color-dot" style="background: #000000; border: 1px solid #333;" onclick="setColor('#000000', this)"></div>
         </div>
-        <div class="section-label">OUTILS SPÉCIAUX</div>
-        <button class="btn-util" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
-        <button class="btn-util" onclick="setType('zone', this)">⬢ ZONE (3 CLICS)</button>
-        <button class="btn-util" onclick="setType('zone4', this)">⬢ ZONE (4 CLICS)</button>
-        <button class="btn-util" onclick="setType('circle', this)">◯ CERCLE (2 CLICS)</button>
-        <button class="btn-util" onclick="setType('text', this)">📝 TEXTE TACTIQUE</button>
+
         <div class="section-label">AUDIO</div>
         <div class="audio-panel">
-            <div class="audio-row" style="display:flex; align-items:center; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
                 <button id="mute-btn" class="mute-btn" onclick="toggleMute()">🔊</button>
                 <input type="range" id="volSlider" min="0" max="1" step="0.1" value="0.5" style="flex-grow:1">
             </div>
         </div>
-        <button class="clear-all" onclick="clearAll()">WIPE TERMINAL</button>
+        <button class="btn-util" style="margin-top:10px" onclick="setType('zone', this)">⬢ ZONE TACTIQUE</button>
+        <button class="clear-all" style="margin-top:auto" onclick="clearAll()">WIPE TERMINAL</button>
     </div>
     <div id="map"></div>
     <div class="status-bar" id="status">LIAISON ÉTABLIE</div>
@@ -114,9 +113,16 @@
     L.imageOverlay('altis.webp', bounds).addTo(map);
     map.fitBounds(bounds);
 
-    let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
+    let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40, currentRot = 0;
     let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0, isMuted = false;
     let drawingPolyline; 
+
+    // --- NOUVEAU : GESTION ROTATION ---
+    function updateRotation(val) {
+        currentRot = val;
+        document.getElementById('rotVal').innerText = val + "°";
+        document.getElementById('arrow-ui').style.transform = `rotate(${val}deg)`;
+    }
 
     const iconFiles = {
         'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
@@ -131,40 +137,10 @@
         'Dot': { isVector: true }
     };
 
-    function toggleMute() { 
-        isMuted = !isMuted; 
-        const btn = document.getElementById('mute-btn');
-        if (isMuted) {
-            btn.innerHTML = "🔇"; // Ou n'importe quel symbole barré
-            btn.classList.add('active');
-        } else {
-            btn.innerHTML = "🔊";
-            btn.classList.remove('active');
-        }
-    }
-    
-    function playTacticalPing() {
-        if (isMuted) return;
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const vol = document.getElementById('volSlider').value;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'square'; osc.frequency.setValueAtTime(880, ctx.currentTime);
-            gain.gain.setValueAtTime(vol * 0.1, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.start(); osc.stop(ctx.currentTime + 0.1);
-        } catch(e){}
-    }
-
-    function jumpTo(pos) { map.flyTo(pos, 1, { animate: true, duration: 1.2 }); updateStatus(`DÉPLOIEMENT : ZONE ${pos}`); }
+    function toggleMute() { isMuted = !isMuted; const btn = document.getElementById('mute-btn'); btn.innerHTML = isMuted ? "🔇" : "🔊"; btn.classList.toggle('active', isMuted); }
+    function playTacticalPing() { if (isMuted) return; try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const vol = document.getElementById('volSlider').value; const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(880, ctx.currentTime); gain.gain.setValueAtTime(vol * 0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1); osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.1); } catch(e){} }
+    function jumpTo(pos) { map.flyTo(pos, 1, { animate: true, duration: 1.2 }); }
     map.on('contextmenu', (e) => { alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]"); });
-
-    function setInterMode(m) { interMode = m; ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active'); load(); }
-    function setType(t, b) { currentType = t; document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); pointsBuffer = []; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } if(interMode !== 'ADD') setInterMode('ADD'); updateStatus(`OUTIL : ${t.toUpperCase()}`); }
-    function updateSizePreview(val) { currentSize = val; document.getElementById('sizeVal').innerText = val + "px"; }
-    function setColor(c, el) { currentColor = c; document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active')); el.classList.add('active'); if(drawingPolyline) drawingPolyline.setStyle({color: c}); }
 
     async function load() {
         if (isSaving) return;
@@ -175,40 +151,53 @@
             lastCount = data.length;
             const currentIds = data.map(p => p.id.toString());
             Object.keys(renderedMarkers).forEach(id => { if (!currentIds.includes(id)) { map.removeLayer(renderedMarkers[id]); delete renderedMarkers[id]; } });
+            
             data.forEach(p => {
                 const id = p.id.toString();
                 if (renderedMarkers[id]) return;
                 const parts = p.label ? p.label.split('|') : [];
                 const color = parts[0] || '#00ff41';
-                const size = parseInt(parts[1]) || 40;
+                const rot = parts[3] || 0; // On récupère la rotation stockée en 4ème position du label
                 let layer;
+
                 if (p.type === 'text') { layer = L.marker([p.x, p.y], { icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${parts[2] || 'TEXTE'}</span>` })}); }
-                else if (p.type === 'circle') { const pts = JSON.parse(p.points_json); const radius = Math.sqrt(Math.pow(pts[1][0] - pts[0][0], 2) + Math.pow(pts[1][1] - pts[0][1], 2)); layer = L.circle(pts[0], { radius: radius, color: color, fillOpacity: 0.3, bubblingMouseEvents: true }); }
-                else if (p.points_json) { const pts = JSON.parse(p.points_json); layer = (p.type.startsWith('zone')) ? L.polygon(pts, {color: color, fillOpacity: 0.3, bubblingMouseEvents: true}) : L.polyline(pts, {color: color, weight: 4, bubblingMouseEvents: true}); }
-                else if (p.type === 'Dot') { layer = L.circleMarker([p.x, p.y], { radius: size / 6, color: color, fillColor: color, fillOpacity: 1 }); }
-                else if (iconFiles[p.type]) { const img = iconFiles[p.type].any || (color === '#ff3e3e' ? iconFiles[p.type].red : iconFiles[p.type].blue); layer = L.marker([p.x, p.y], { icon: L.icon({ iconUrl: img, iconSize: [size, size*0.75], iconAnchor: [size/2, (size*0.75)/2] }) }); }
-                if (layer) { layer.on('click', (e) => { if (interMode !== 'ADD') { L.DomEvent.stopPropagation(e); if (interMode === 'DEL') del(p.id); } }); layer.addTo(map); renderedMarkers[id] = layer; }
+                else if (p.points_json) { const pts = JSON.parse(p.points_json); layer = L.polygon(pts, {color: color, fillOpacity: 0.3, bubblingMouseEvents: true}); }
+                else if (iconFiles[p.type]) { 
+                    const img = iconFiles[p.type].any || (color === '#ff3e3e' ? iconFiles[p.type].red : iconFiles[p.type].blue);
+                    layer = L.marker([p.x, p.y], { 
+                        icon: L.icon({ 
+                            iconUrl: img, 
+                            iconSize: [40, 30],
+                            className: `rotated-icon-${id}` 
+                        }) 
+                    });
+                    // On applique la rotation après l'ajout à la carte
+                    layer.on('add', () => {
+                        const el = document.querySelector(`.rotated-icon-${id}`);
+                        if(el) el.style.transform += ` rotate(${rot}deg)`;
+                    });
+                }
+                if (layer) { layer.addTo(map); renderedMarkers[id] = layer; }
             });
         } catch (e) {}
     }
 
-    map.on('mousemove', e => { if (drawingPolyline && pointsBuffer.length > 0) drawingPolyline.setLatLngs([pointsBuffer[pointsBuffer.length - 1], e.latlng]); });
+    function setType(t, b) { currentType = t; document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); pointsBuffer = []; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } load(); }
+    function setColor(c, el) { currentColor = c; document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active')); el.classList.add('active'); }
+    async function save(obj) { isSaving = true; await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) }); isSaving = false; load(); }
+    async function clearAll() { if(confirm("WIPE?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
+
     map.on('click', e => {
-        if (interMode !== 'ADD') return;
         const pos = [e.latlng.lat, e.latlng.lng];
-        if (currentType === 'text') { const txt = prompt("Texte :"); if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${txt}` }); }
-        else if (['arrow', 'zone', 'zone4', 'circle'].includes(currentType)) {
+        if (currentType === 'zone') {
             pointsBuffer.push(pos);
-            let limit = (currentType === 'zone') ? 3 : (currentType === 'zone4' ? 4 : 2);
-            if (pointsBuffer.length === limit) { save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` }); pointsBuffer = []; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } }
-            else { if (!drawingPolyline) drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map); }
-        } else { save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` }); }
+            if (pointsBuffer.length === 3) { save({ type: 'zone', points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|40` }); pointsBuffer = []; }
+        } else {
+            // Sauvegarde avec Rotation : Couleur | Taille | Texte | Rotation
+            save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|40||${currentRot}` });
+        }
     });
 
-    function updateStatus(t) { document.getElementById('status').innerText = t; }
-    async function save(obj) { isSaving = true; updateStatus("SYNC..."); await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) }); isSaving = false; load(); }
-    async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
-    async function clearAll() { if(confirm("WIPE?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
     setInterval(load, 1000);
     load();
 </script>
