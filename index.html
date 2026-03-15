@@ -46,6 +46,15 @@
 
         .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
         
+        /* QUICK JUMP GRID */
+        .bookmark-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 10px; }
+        .btn-jump { 
+            background: #111; border: 1px solid #333; color: #8892b0; font-size: 0.65rem; 
+            padding: 6px; cursor: pointer; border-radius: 3px; font-weight: bold; transition: 0.2s;
+            text-align: center;
+        }
+        .btn-jump:hover { border-color: var(--blue); color: white; background: rgba(0, 210, 255, 0.1); }
+
         .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
         .mode-btn { padding: 10px 2px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.6rem; font-weight: bold; border-radius: 4px; text-align: center; transition: 0.2s; }
         .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); box-shadow: 0 0 8px var(--primary); }
@@ -83,6 +92,14 @@
     <div id="sidebar">
         <div class="header">ALTIS COM</div>
         
+        <div class="section-label">SIGNETS TACTIQUES</div>
+        <div class="bookmark-grid">
+            <button class="btn-jump" onclick="jumpTo([596, 202])">KAVALA</button>
+            <button class="btn-jump" onclick="jumpTo([565, 1089])">PYRGOS</button>
+            <button class="btn-jump" onclick="jumpTo([987, 891])">ATHIRA</button>
+            <button class="btn-jump" onclick="jumpTo([851, 931])">AIRPORT</button>
+        </div>
+
         <div class="section-label">MODE OPÉRATOIRE</div>
         <div class="mode-selector">
             <button id="btn-add" class="mode-btn active" onclick="setInterMode('ADD')">AJOUTER</button>
@@ -184,6 +201,17 @@
             osc.start(); osc.stop(ctx.currentTime + 0.1);
         } catch(e){}
     }
+
+    // --- FONCTION JUMP ---
+    function jumpTo(pos) {
+        map.flyTo(pos, 1, { animate: true, duration: 1.2 });
+        updateStatus(`DÉPLOIEMENT : ZONE ${pos}`);
+    }
+
+    // --- CLIC DROIT COORDONNÉES ---
+    map.on('contextmenu', (e) => {
+        alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]");
+    });
 
     function setInterMode(m) {
         interMode = m;
@@ -287,11 +315,6 @@
         } else {
             save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` });
         }
-    });
-
-    // --- INTEGRATION CLIC DROIT COORDONNÉES ---
-    map.on('contextmenu', (e) => {
-        alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]");
     });
 
     function updateSizePreview(val) { currentSize = val; document.getElementById('sizeVal').innerText = val + "px"; }
