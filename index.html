@@ -21,6 +21,8 @@
         .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
         .mode-btn { padding: 10px 2px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.6rem; font-weight: bold; border-radius: 4px; text-align: center; transition: 0.2s; }
         .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); box-shadow: 0 0 8px var(--primary); }
+        .mode-btn#btn-edit.active { border-color: var(--blue); color: var(--blue); background: rgba(0, 210, 255, 0.1); box-shadow: 0 0 8px var(--blue); }
+        .mode-btn.mode-del.active { border-color: var(--red); color: var(--red); background: rgba(255, 62, 62, 0.1); box-shadow: 0 0 8px var(--red); }
         .grid-icons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
         .icon-btn { background: rgba(255,255,255,0.03); border: 1px solid #2a3544; padding: 8px; border-radius: 4px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; }
         .icon-btn img { width: 30px; height: auto; margin-bottom: 5px; filter: drop-shadow(0 0 2px black); }
@@ -134,13 +136,8 @@
     function toggleMute() { 
         isMuted = !isMuted; 
         const btn = document.getElementById('mute-btn');
-        if (isMuted) {
-            btn.innerHTML = "🔇"; // Ou n'importe quel symbole barré
-            btn.classList.add('active');
-        } else {
-            btn.innerHTML = "🔊";
-            btn.classList.remove('active');
-        }
+        btn.innerHTML = isMuted ? "🔇" : "🔊";
+        btn.classList.toggle('active', isMuted);
     }
     
     function playTacticalPing() {
@@ -161,10 +158,22 @@
     function jumpTo(pos) { map.flyTo(pos, 1, { animate: true, duration: 1.2 }); updateStatus(`DÉPLOIEMENT : ZONE ${pos}`); }
     map.on('contextmenu', (e) => { alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]"); });
 
-    function setInterMode(m) { interMode = m; ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active'); load(); }
-    function setType(t, b) { currentType = t; document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); pointsBuffer = []; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } if(interMode !== 'ADD') setInterMode('ADD'); updateStatus(`OUTIL : ${t.toUpperCase()}`); }
-    function updateSizePreview(val) { currentSize = val; document.getElementById('sizeVal').innerText = val + "px"; }
-    function setColor(c, el) { currentColor = c; document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active')); el.classList.add('active'); if(drawingPolyline) drawingPolyline.setStyle({color: c}); }
+    function setInterMode(m) {
+        interMode = m;
+        ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active'));
+        document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active');
+        load();
+    }
+
+    function setType(t, b) {
+        currentType = t;
+        document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active'));
+        b.classList.add('active');
+        pointsBuffer = [];
+        if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+        if(interMode !== 'ADD' && interMode !== 'EDIT') setInterMode('ADD');
+        updateStatus(`OUTIL : ${t.toUpperCase()}`);
+    }
 
     async function load() {
         if (isSaving) return;
@@ -173,42 +182,111 @@
             const data = await res.json();
             if (data.length > lastCount && lastCount !== 0) playTacticalPing();
             lastCount = data.length;
+
             const currentIds = data.map(p => p.id.toString());
-            Object.keys(renderedMarkers).forEach(id => { if (!currentIds.includes(id)) { map.removeLayer(renderedMarkers[id]); delete renderedMarkers[id]; } });
+            Object.keys(renderedMarkers).forEach(id => {
+                if (!currentIds.includes(id)) { map.removeLayer(renderedMarkers[id]); delete renderedMarkers[id]; }
+            });
+
             data.forEach(p => {
                 const id = p.id.toString();
-                if (renderedMarkers[id]) return;
+                if (renderedMarkers[id]) {
+                    renderedMarkers[id].options.interactive = (interMode !== 'ADD');
+                    return;
+                }
                 const parts = p.label ? p.label.split('|') : [];
                 const color = parts[0] || '#00ff41';
                 const size = parseInt(parts[1]) || 40;
                 let layer;
-                if (p.type === 'text') { layer = L.marker([p.x, p.y], { icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${parts[2] || 'TEXTE'}</span>` })}); }
-                else if (p.type === 'circle') { const pts = JSON.parse(p.points_json); const radius = Math.sqrt(Math.pow(pts[1][0] - pts[0][0], 2) + Math.pow(pts[1][1] - pts[0][1], 2)); layer = L.circle(pts[0], { radius: radius, color: color, fillOpacity: 0.3, bubblingMouseEvents: true }); }
-                else if (p.points_json) { const pts = JSON.parse(p.points_json); layer = (p.type.startsWith('zone')) ? L.polygon(pts, {color: color, fillOpacity: 0.3, bubblingMouseEvents: true}) : L.polyline(pts, {color: color, weight: 4, bubblingMouseEvents: true}); }
-                else if (p.type === 'Dot') { layer = L.circleMarker([p.x, p.y], { radius: size / 6, color: color, fillColor: color, fillOpacity: 1 }); }
-                else if (iconFiles[p.type]) { const img = iconFiles[p.type].any || (color === '#ff3e3e' ? iconFiles[p.type].red : iconFiles[p.type].blue); layer = L.marker([p.x, p.y], { icon: L.icon({ iconUrl: img, iconSize: [size, size*0.75], iconAnchor: [size/2, (size*0.75)/2] }) }); }
-                if (layer) { layer.on('click', (e) => { if (interMode !== 'ADD') { L.DomEvent.stopPropagation(e); if (interMode === 'DEL') del(p.id); } }); layer.addTo(map); renderedMarkers[id] = layer; }
+
+                if (p.type === 'text') {
+                    layer = L.marker([p.x, p.y], { icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${parts[2] || 'TEXTE'}</span>` })});
+                } else if (p.type === 'circle') {
+                    const pts = JSON.parse(p.points_json);
+                    const radius = Math.sqrt(Math.pow(pts[1][0] - pts[0][0], 2) + Math.pow(pts[1][1] - pts[0][1], 2));
+                    layer = L.circle(pts[0], { radius: radius, color: color, fillOpacity: 0.3, bubblingMouseEvents: true });
+                } else if (p.points_json) {
+                    const pts = JSON.parse(p.points_json);
+                    layer = (p.type.startsWith('zone')) ? 
+                        L.polygon(pts, {color: color, fillOpacity: 0.3, bubblingMouseEvents: true}) : 
+                        L.polyline(pts, {color: color, weight: 4, bubblingMouseEvents: true});
+                } else if (p.type === 'Dot') {
+                    layer = L.circleMarker([p.x, p.y], { radius: size / 6, color: color, fillColor: color, fillOpacity: 1 });
+                } else if (iconFiles[p.type]) {
+                    const img = iconFiles[p.type].any || (color === '#ff3e3e' ? iconFiles[p.type].red : iconFiles[p.type].blue);
+                    layer = L.marker([p.x, p.y], { icon: L.icon({ iconUrl: img, iconSize: [size, size*0.75], iconAnchor: [size/2, (size*0.75)/2] }) });
+                }
+
+                if (layer) {
+                    layer.on('click', (e) => {
+                        if (interMode !== 'ADD') {
+                            L.DomEvent.stopPropagation(e);
+                            if (interMode === 'DEL') del(p.id);
+                            else if (interMode === 'EDIT' && !p.points_json) {
+                                // On passe les infos du marqueur existant à la fonction d'édition
+                                updateExisting(p.id, p.x, p.y, p.type, parts[2] || '');
+                            }
+                        }
+                    });
+                    layer.addTo(map);
+                    renderedMarkers[id] = layer;
+                }
             });
         } catch (e) {}
     }
 
-    map.on('mousemove', e => { if (drawingPolyline && pointsBuffer.length > 0) drawingPolyline.setLatLngs([pointsBuffer[pointsBuffer.length - 1], e.latlng]); });
+    map.on('mousemove', e => {
+        if (drawingPolyline && pointsBuffer.length > 0) {
+            drawingPolyline.setLatLngs([pointsBuffer[pointsBuffer.length - 1], e.latlng]);
+        }
+    });
+
     map.on('click', e => {
         if (interMode !== 'ADD') return;
         const pos = [e.latlng.lat, e.latlng.lng];
-        if (currentType === 'text') { const txt = prompt("Texte :"); if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${txt}` }); }
-        else if (['arrow', 'zone', 'zone4', 'circle'].includes(currentType)) {
+        if (currentType === 'text') {
+            const txt = prompt("Texte :");
+            if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${txt}` });
+        } else if (['arrow', 'zone', 'zone4', 'circle'].includes(currentType)) {
             pointsBuffer.push(pos);
             let limit = (currentType === 'zone') ? 3 : (currentType === 'zone4' ? 4 : 2);
-            if (pointsBuffer.length === limit) { save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` }); pointsBuffer = []; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } }
-            else { if (!drawingPolyline) drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map); }
-        } else { save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` }); }
+            if (pointsBuffer.length === limit) {
+                save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` });
+                pointsBuffer = [];
+                if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+            } else { 
+                if (!drawingPolyline) {
+                    drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map);
+                }
+            }
+        } else {
+            save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` });
+        }
     });
 
+    function updateSizePreview(val) { currentSize = val; document.getElementById('sizeVal').innerText = val + "px"; }
+    function setColor(c, el) { currentColor = c; document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active')); el.classList.add('active'); if(drawingPolyline) drawingPolyline.setStyle({color: c}); }
     function updateStatus(t) { document.getElementById('status').innerText = t; }
+    
     async function save(obj) { isSaving = true; updateStatus("SYNC..."); await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) }); isSaving = false; load(); }
     async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
     async function clearAll() { if(confirm("WIPE?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
+    
+    // FONCTION ÉDITER AVANCÉE
+    async function updateExisting(id, x, y, type, oldText) {
+        updateStatus("ÉDITION...");
+        let newLabel = `${currentColor}|${currentSize}`;
+        
+        if (type === 'text') {
+            const newTxt = prompt("Modifier le texte :", oldText);
+            if (newTxt === null) return; // Annule l'édition si on clique sur annuler
+            newLabel += `|${newTxt}`;
+        }
+        
+        await fetch(`/pings?id=${id}`, { method: 'DELETE' });
+        save({ x: x, y: y, type: type, label: newLabel });
+    }
+
     setInterval(load, 1000);
     load();
 </script>
