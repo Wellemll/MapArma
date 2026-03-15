@@ -6,11 +6,23 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #00ff41; --blue: #00d2ff; --red: #ff3e3e; --orange: #ff9d00; --bg: #05070a; }
+        :root { 
+            --primary: #00ff41; --blue: #00d2ff; --red: #ff3e3e; --orange: #ff9d00; --bg: #05070a; 
+        }
         
+        /* Scanline Overlay Effect */
+        body::before {
+            content: " ";
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 3px 100%;
+            z-index: 2000; pointer-events: none;
+        }
+
         #map::after {
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: rgba(0, 255, 65, 0.1); box-shadow: 0 0 15px var(--primary);
+            background: rgba(0, 255, 65, 0.2); box-shadow: 0 0 15px var(--primary);
             z-index: 1000; pointer-events: none; animation: scanning 8s linear infinite;
         }
         @keyframes scanning { 0% { top: 0%; } 100% { top: 100%; } }
@@ -18,52 +30,60 @@
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: 'JetBrains Mono', monospace; color: white; overflow: hidden; }
         #app { display: flex; height: 100vh; }
         
+        /* Look Cockpit Sidebar */
         #sidebar { 
-            width: 280px; background: rgba(13, 17, 23, 0.98); border-right: 1px solid #1a222d; 
+            width: 280px; 
+            background: linear-gradient(135deg, #10141d 0%, #05070a 100%); 
+            border-right: 4px solid #1a222d; 
+            border-image: linear-gradient(to bottom, #2a3544, #10141d) 1 100%;
             padding: 15px; display: flex; flex-direction: column; z-index: 1001; overflow-y: auto; 
+            box-shadow: inset -10px 0 20px rgba(0,0,0,0.8);
         }
 
-        .header { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; text-align: center; margin-bottom: 15px; letter-spacing: 2px; }
+        /* Glitch Effect Header */
+        .header { 
+            font-family: 'Orbitron', sans-serif; color: var(--primary); 
+            font-size: 1.1rem; text-align: center; margin-bottom: 15px; 
+            letter-spacing: 2px; text-shadow: 0 0 8px var(--primary);
+            animation: glitch 4s infinite;
+        }
+
+        @keyframes glitch {
+          0% { transform: translate(0); text-shadow: 0 0 8px var(--primary); opacity: 1; }
+          2% { transform: translate(2px, -1px); text-shadow: 2px 0 var(--red), -2px 0 var(--blue); opacity: 0.8; }
+          4% { transform: translate(-2px, 1px); text-shadow: -2px 0 var(--red), 2px 0 var(--blue); opacity: 1; }
+          6% { transform: translate(0); text-shadow: 0 0 8px var(--primary); }
+          100% { transform: translate(0); }
+        }
+
         .section-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin: 12px 0 6px; font-weight: bold; border-bottom: 1px solid #1a222d; padding-bottom: 3px; }
         
         .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
         .mode-btn { padding: 10px 2px; border: 1px solid #333; background: #111; color: #666; cursor: pointer; font-size: 0.6rem; font-weight: bold; border-radius: 4px; text-align: center; transition: 0.2s; }
-        .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); }
-        .mode-btn#btn-edit.active { border-color: var(--blue); color: var(--blue); background: rgba(0, 210, 255, 0.1); }
-        .mode-btn.mode-del.active { border-color: var(--red); color: var(--red); background: rgba(255, 62, 62, 0.1); }
+        .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(0, 255, 65, 0.1); box-shadow: 0 0 8px var(--primary); }
+        .mode-btn#btn-edit.active { border-color: var(--blue); color: var(--blue); background: rgba(0, 210, 255, 0.1); box-shadow: 0 0 8px var(--blue); }
+        .mode-btn.mode-del.active { border-color: var(--red); color: var(--red); background: rgba(255, 62, 62, 0.1); box-shadow: 0 0 8px var(--red); }
 
         .grid-icons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
         .icon-btn { 
             background: rgba(255,255,255,0.03); border: 1px solid #2a3544; padding: 8px; 
             border-radius: 4px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center;
         }
-        .icon-btn img { width: 30px; height: auto; margin-bottom: 5px; pointer-events: none; }
+        .icon-btn img { width: 30px; height: auto; margin-bottom: 5px; pointer-events: none; filter: drop-shadow(0 0 2px black); }
         .icon-btn .dot-preview { width: 12px; height: 12px; border-radius: 50%; background: white; margin: 10px 0 13px; }
         .icon-btn span { font-size: 0.55rem; color: #8892b0; text-align: center; font-weight: bold; }
-        .icon-btn.active { border-color: var(--blue); background: rgba(0, 210, 255, 0.1); }
+        .icon-btn.active { border-color: var(--blue); background: rgba(0, 210, 255, 0.1); box-shadow: 0 0 10px rgba(0, 210, 255, 0.3); }
 
-        .color-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 10px; }
-        .color-dot { height: 25px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; }
-        .color-dot.active { border-color: white; transform: scale(1.1); }
+        .color-dot { height: 25px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+        .color-dot.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 10px white; }
 
-        .slider-container { padding: 5px 0; margin-bottom: 10px; }
-        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--primary); }
-        .size-preview { font-size: 0.6rem; color: var(--primary); text-align: right; }
-
-        .btn-util { width: 100%; padding: 10px; margin-bottom: 4px; border: 1px solid #2a3544; background: rgba(255,255,255,0.02); color: #8892b0; cursor: pointer; font-size: 0.7rem; border-radius: 4px; text-align: left; }
-        .btn-util.active { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
-
-        .audio-panel { margin-top: 10px; padding: 10px; border: 1px solid #1a222d; border-radius: 4px; background: rgba(0,0,0,0.4); }
-        .audio-row { display: flex; align-items: center; gap: 10px; }
-        .mute-btn { background: #111; border: 1px solid #333; color: #8892b0; cursor: pointer; font-size: 0.6rem; padding: 5px; border-radius: 3px; }
-        .mute-btn.active { color: var(--red); border-color: var(--red); }
-
-        #map { flex-grow: 1; background: #000; cursor: crosshair; position: relative; }
-        .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; }
+        .audio-panel { margin-top: 10px; padding: 10px; border: 1px solid #1a222d; border-radius: 4px; background: rgba(0,0,0,0.4); box-shadow: inset 0 0 10px black; }
         
-        .leaflet-image-layer { image-rendering: crisp-edges; image-rendering: pixelated; }
-        .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; font-size: 14px; white-space: nowrap; }
-        .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 8px; cursor: pointer; font-size: 0.6rem; opacity: 0.7; }
+        #map { flex-grow: 1; background: #000; cursor: crosshair; position: relative; }
+        .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; text-shadow: 0 0 5px var(--primary); }
+        
+        .leaflet-image-layer { image-rendering: crisp-edges; image-rendering: pixelated; filter: brightness(0.8) contrast(1.1); }
+        .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 2px 2px 2px black; font-size: 14px; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -97,11 +117,9 @@
             <button class="icon-btn" onclick="setType('Armourwheeled', this)"><img src="Icons/Armourwheeled.png"><span>BLINDÉ LÉGER</span></button>
         </div>
 
-        <div class="section-label">DIMENSION DES ICÔNES</div>
-        <div class="slider-container">
-            <input type="range" id="sizeSlider" min="20" max="100" value="40" oninput="updateSizePreview(this.value)">
-            <div class="size-preview" id="sizeVal">40px</div>
-        </div>
+        <div class="section-label">DIMENSION</div>
+        <input type="range" id="sizeSlider" min="20" max="100" value="40" oninput="updateSizePreview(this.value)">
+        <div class="size-preview" id="sizeVal">40px</div>
 
         <div class="section-label">COULEUR TACTIQUE</div>
         <div class="color-picker">
@@ -120,15 +138,15 @@
         <button class="btn-util" onclick="setType('circle', this)">◯ CERCLE (2 CLICS)</button>
         <button class="btn-util" onclick="setType('text', this)">📝 TEXTE TACTIQUE</button>
 
-        <div class="section-label">SYSTÈME AUDIO</div>
+        <div class="section-label">AUDIO</div>
         <div class="audio-panel">
-            <div class="audio-row">
+            <div class="audio-row" style="display:flex; align-items:center; gap:10px;">
                 <button id="mute-btn" class="mute-btn" onclick="toggleMute()">MUTE</button>
                 <input type="range" id="volSlider" min="0" max="1" step="0.1" value="0.5">
             </div>
         </div>
 
-        <button class="clear-all" onclick="clearAll()">WIPE TERMINAL</button>
+        <button class="clear-all" style="margin-top:auto" onclick="clearAll()">WIPE TERMINAL</button>
     </div>
     
     <div id="map"></div>
@@ -144,6 +162,7 @@
 
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
     let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0, isMuted = false;
+    let drawingPolyline; // Ghost line for drawing
 
     const iconFiles = {
         'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
@@ -175,8 +194,6 @@
         } catch(e){}
     }
 
-    function updateSizePreview(val) { currentSize = val; document.getElementById('sizeVal').innerText = val + "px"; }
-
     function setInterMode(m) {
         interMode = m;
         ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active'));
@@ -184,22 +201,15 @@
         load();
     }
 
-    function setColor(c, el) {
-        currentColor = c;
-        document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-        el.classList.add('active');
-    }
-
     function setType(t, b) {
         currentType = t;
         document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active'));
         b.classList.add('active');
         pointsBuffer = [];
+        if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
         if(interMode !== 'ADD') setInterMode('ADD');
         updateStatus(`OUTIL : ${t.toUpperCase()}`);
     }
-
-    function updateStatus(t) { document.getElementById('status').innerText = t; }
 
     async function load() {
         if (isSaving) return;
@@ -230,7 +240,6 @@
                 } else if (p.type === 'circle') {
                     const pts = JSON.parse(p.points_json);
                     const radius = Math.sqrt(Math.pow(pts[1][0] - pts[0][0], 2) + Math.pow(pts[1][1] - pts[0][1], 2));
-                    // bubblingMouseEvents permet au clic de passer à travers pour poser une icone dessous
                     layer = L.circle(pts[0], { radius: radius, color: color, fillOpacity: 0.3, bubblingMouseEvents: true });
                 } else if (p.points_json) {
                     const pts = JSON.parse(p.points_json);
@@ -246,7 +255,6 @@
 
                 if (layer) {
                     layer.on('click', (e) => {
-                        // On ne bloque le clic que si on est en mode DEL ou EDIT
                         if (interMode !== 'ADD') {
                             L.DomEvent.stopPropagation(e);
                             if (interMode === 'DEL') del(p.id);
@@ -260,21 +268,11 @@
         } catch (e) {}
     }
 
-    async function save(obj) {
-        isSaving = true;
-        updateStatus("TRANSMISSION...");
-        await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) });
-        isSaving = false;
-        load();
-    }
-
-    async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
-    async function clearAll() { if(confirm("WIPE?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
-
-    async function updateExisting(id, x, y, type) {
-        await fetch(`/pings?id=${id}`, { method: 'DELETE' });
-        save({ x: x, y: y, type: type, label: `${currentColor}|${currentSize}` });
-    }
+    map.on('mousemove', e => {
+        if (drawingPolyline && pointsBuffer.length > 0) {
+            drawingPolyline.setLatLngs([pointsBuffer[pointsBuffer.length - 1], e.latlng]);
+        }
+    });
 
     map.on('click', e => {
         if (interMode !== 'ADD') return;
@@ -288,11 +286,25 @@
             if (pointsBuffer.length === limit) {
                 save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` });
                 pointsBuffer = [];
-            } else { updateStatus(`CLIC ${pointsBuffer.length}/${limit}...`); }
+                if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+            } else { 
+                updateStatus(`CLIC ${pointsBuffer.length}/${limit}...`);
+                if (!drawingPolyline) {
+                    drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map);
+                }
+            }
         } else {
             save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` });
         }
     });
+
+    function updateSizePreview(val) { currentSize = val; document.getElementById('sizeVal').innerText = val + "px"; }
+    function setColor(c, el) { currentColor = c; document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active')); el.classList.add('active'); if(drawingPolyline) drawingPolyline.setStyle({color: c}); }
+    function updateStatus(t) { document.getElementById('status').innerText = t; }
+    async function save(obj) { isSaving = true; updateStatus("SYNC..."); await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) }); isSaving = false; load(); }
+    async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
+    async function clearAll() { if(confirm("WIPE?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
+    async function updateExisting(id, x, y, type) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); save({ x: x, y: y, type: type, label: `${currentColor}|${currentSize}` }); }
 
     setInterval(load, 1000);
     load();
