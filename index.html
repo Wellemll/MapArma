@@ -305,8 +305,6 @@
                 else if (p.type === 'circle') { const pts = JSON.parse(p.points_json); const radius = Math.sqrt(Math.pow(pts[1][0] - pts[0][0], 2) + Math.pow(pts[1][1] - pts[0][1], 2)); layer = L.circle(pts[0], { radius: radius, color: color, fillOpacity: 0.3, bubblingMouseEvents: true }); }
                 else if (p.points_json) { 
                     const pts = JSON.parse(p.points_json);
-                    
-                    // --- NOUVEAU : AFFICHER LA LIGNE D'ARTILLERIE POUR TOUS ---
                     if (p.type === 'mesure_line') {
                         layer = L.polyline(pts, {color: color, weight: 3, dashArray: '5, 10', bubblingMouseEvents: true});
                         if (parts[2]) {
@@ -357,14 +355,14 @@
                 document.getElementById('hud-azimut').innerText = "--";
                 document.getElementById('hud-elev-haut').innerText = "--";
                 document.getElementById('hud-elev-bas').innerText = "--";
-                drawingPolyline = L.polyline([pos, pos], {color: var(--orange), dashArray: '5, 10'}).addTo(map);
+                // CORRECTION DE L'ERREUR DE SYNTAXE ICI
+                drawingPolyline = L.polyline([pos, pos], {color: '#ff9d00', dashArray: '5, 10'}).addTo(map);
             } else {
                 artillerieCible.p1 = pointsBuffer[0]; 
                 artillerieCible.p2 = pointsBuffer[1]; 
                 
                 majArtillerie(); 
 
-                // --- NOUVEAU : SAUVEGARDE DE LA LIGNE POUR LES ALLIÉS ---
                 const distMeters = document.getElementById('hud-dist').innerText;
                 const azimut = document.getElementById('hud-azimut').innerText;
                 const tooltipText = `DIST: ${distMeters} | AZ: ${azimut}`;
