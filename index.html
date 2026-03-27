@@ -142,8 +142,8 @@
     map.fitBounds(bounds);
 
     // --- CONFIGURATION ARTILLERIE ---
-    const ECHELLE_PXM = 0.1; // MODIFIÉ : 100 pixels = 1000m (1 chunk). Donc 1 pixel = 10m.
-    const DONNEES_82MM = { v0: 200, gravite: 9.81 }; // Vitesse de base du mortier 82mm
+    const ECHELLE_PXM = 0.0707; // CORRECTION: 100 pixels = 1414.21m (diagonale 1kmx1km)
+    const DONNEES_82MM = { v0: 200, gravite: 9.81 }; 
 
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
     let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0, isMuted = false;
@@ -280,7 +280,6 @@
         if (interMode !== 'ADD') return;
         const pos = [e.latlng.lat, e.latlng.lng];
 
-        // --- NOUVEAU: OUTIL MESURE ---
         if (currentType === 'mesure') {
             pointsBuffer.push(pos);
             if (pointsBuffer.length === 1) {
@@ -292,13 +291,12 @@
                 document.getElementById('hud-elev-bas').innerText = "--";
                 drawingPolyline = L.polyline([pos, pos], {color: '#ff9d00', dashArray: '5, 10'}).addTo(map);
             } else {
-                const p1 = pointsBuffer[0]; // Mortier
-                const p2 = pointsBuffer[1]; // Cible
+                const p1 = pointsBuffer[0]; 
+                const p2 = pointsBuffer[1]; 
                 
                 const distPixels = Math.sqrt(Math.pow(p2[1]-p1[1], 2) + Math.pow(p2[0]-p1[0], 2));
                 const distMeters = (distPixels / ECHELLE_PXM).toFixed(0);
                 
-                // Calcul Azimut (Nord = 0°)
                 let dx = p2[1] - p1[1];
                 let dy = p2[0] - p1[0];
                 let angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -330,7 +328,6 @@
             else {
                 const dx = e.latlng.lng - pendingIconPos[1];
                 const dy = e.latlng.lat - pendingIconPos[0];
-                // L'angle pour les icônes est géré visuellement, calcul standard atan2
                 let angle = Math.atan2(dx, dy) * (180 / Math.PI);
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 const finalRot = dist < 5 ? "" : Math.round(angle);
