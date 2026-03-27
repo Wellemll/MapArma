@@ -203,6 +203,7 @@
         const A = (g * x * x) / (2 * v0 * v0);
         const discriminant = (x * x) - (4 * A * (A + y));
 
+        // Si la cible est physiquement inatteignable avec cette charge
         if (discriminant < 0) return null; 
 
         // Angles en radians
@@ -220,16 +221,13 @@
         const t1 = x / (v0 * Math.cos(rad1));
         const t2 = x / (v0 * Math.cos(rad2));
 
-        // Retour aux contraintes strictes : 25° minimum, 85° maximum
-        const res = { 
-            bas: deg1 >= 25 ? `${deg1.toFixed(1)}°` : "HORS PORTÉE", 
-            haut: deg2 <= 85 ? `${deg2.toFixed(1)}°` : "HORS PORTÉE",
-            tempsBas: deg1 >= 25 ? `${t1.toFixed(1)}s` : "--",
-            tempsHaut: deg2 <= 85 ? `${t2.toFixed(1)}s` : "--"
+        // TOUTES LES RESTRICTIONS D'ANGLE SONT LEVÉES
+        return { 
+            bas: `${deg1.toFixed(1)}°`, 
+            haut: `${deg2.toFixed(1)}°`,
+            tempsBas: `${t1.toFixed(1)}s`,
+            tempsHaut: `${t2.toFixed(1)}s`
         };
-        
-        if (deg1 < 25 && deg2 > 85) return null; 
-        return res;
     }
 
     function majArtillerie() {
