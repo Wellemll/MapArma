@@ -45,7 +45,7 @@
         .tactical-marker { position: relative; display: flex; align-items: center; justify-content: center; overflow: visible !important; }
         .dir-arrow { position: absolute; font-size: 18px; font-weight: bold; z-index: 1; }
 
-        /* HUD ARTILLERIE - MODIFIÉ (Largeur 300px pour l'espace du temps de vol) */
+        /* HUD ARTILLERIE */
         #artillery-hud { position: absolute; top: 15px; right: 15px; width: 300px; background: rgba(13, 17, 23, 0.95); border: 1px solid var(--orange); border-radius: 4px; padding: 10px; font-family: 'JetBrains Mono', monospace; color: white; z-index: 1002; display: none; box-shadow: 0 0 15px rgba(255, 157, 0, 0.2); }
         #artillery-hud .hud-header { font-family: 'Orbitron', sans-serif; color: var(--orange); text-align: center; font-size: 0.8rem; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
         #artillery-hud .hud-data { font-size: 0.65rem; line-height: 1.5; color: #8892b0; }
@@ -53,14 +53,13 @@
         #artillery-hud .close-hud { position: absolute; top: 5px; right: 5px; background: none; border: none; color: var(--red); cursor: pointer; font-weight: bold; }
         
         /* SELECTEUR DE CHARGE ET INPUT ALTITUDE */
-        #charge-select, .alt-input { background: rgba(0,0,0,0.5); color: var(--orange); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; box-sizing: border-box; outline: none; border-radius: 3px; }
+        #charge-select, .alt-input { background: rgba(0,0,0,0.5); color: var(--orange); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; box-sizing: border-box; outline: none; border-radius: 3px; margin-bottom: 4px;}
         #charge-select option { background: #111; color: white; }
         .alt-input { margin-top: 2px; color: white; }
         .alt-input::placeholder { color: #555; }
         .alt-container { display: flex; gap: 5px; margin-top: 5px; }
         .alt-box { flex: 1; text-align: center; }
 
-        /* Style pour l'étiquette au survol des lignes d'artillerie */
         .tooltip-artillery { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--orange) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--orange); }
     </style>
 </head>
@@ -144,7 +143,7 @@
             
             <div class="alt-container">
                 <div class="alt-box">
-                    <label>ALT. MORTIER</label>
+                    <label>ALT. TIREUR</label>
                     <input type="number" id="alt-mortier" class="alt-input" placeholder="Auto" step="10" oninput="majArtillerie()">
                 </div>
                 <div class="alt-box">
@@ -217,11 +216,11 @@
         const deg1 = rad1 * (180 / Math.PI); 
         const deg2 = rad2 * (180 / Math.PI); 
         
-        // --- NOUVEAU : CALCUL DU TEMPS DE VOL ---
-        // Temps = Distance horizontale / (vitesse initiale * cos(angle))
+        // Temps de vol en secondes
         const t1 = x / (v0 * Math.cos(rad1));
         const t2 = x / (v0 * Math.cos(rad2));
 
+        // Retour aux contraintes strictes : 25° minimum, 85° maximum
         const res = { 
             bas: deg1 >= 25 ? `${deg1.toFixed(1)}°` : "HORS PORTÉE", 
             haut: deg2 <= 85 ? `${deg2.toFixed(1)}°` : "HORS PORTÉE",
