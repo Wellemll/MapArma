@@ -56,6 +56,7 @@
         #charge-select, .alt-input { background: rgba(0,0,0,0.5); color: var(--orange); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; box-sizing: border-box; outline: none; border-radius: 3px; }
         #charge-select option { background: #111; color: white; }
         .alt-input { margin-top: 2px; color: white; }
+        .alt-input::placeholder { color: #555; }
         .alt-container { display: flex; gap: 5px; margin-top: 5px; }
         .alt-box { flex: 1; text-align: center; }
     </style>
@@ -141,11 +142,11 @@
             <div class="alt-container">
                 <div class="alt-box">
                     <label>ALT. MORTIER</label>
-                    <input type="number" id="alt-mortier" class="alt-input" value="0" step="10" oninput="majArtillerie()">
+                    <input type="number" id="alt-mortier" class="alt-input" placeholder="Auto" step="10" oninput="majArtillerie()">
                 </div>
                 <div class="alt-box">
                     <label>ALT. CIBLE</label>
-                    <input type="number" id="alt-cible" class="alt-input" value="0" step="10" oninput="majArtillerie()">
+                    <input type="number" id="alt-cible" class="alt-input" placeholder="Auto" step="10" oninput="majArtillerie()">
                 </div>
             </div>
             
@@ -195,25 +196,20 @@
     function calculerTir3D(distM, v0, g, altShooter, altTarget) {
         if (distM === 0) return null;
 
-        const x = distM; // Distance horizontale
-        const y = altTarget - altShooter; // Différence d'altitude (y positif si la cible est plus haute)
+        const x = distM; 
+        const y = altTarget - altShooter; 
         
-        // Résolution de l'équation de trajectoire balistique
         const A = (g * x * x) / (2 * v0 * v0);
         const discriminant = (x * x) - (4 * A * (A + y));
 
-        // Si le discriminant est négatif, la cible est hors de portée physique
         if (discriminant < 0) return null; 
 
-        // Les deux solutions pour u = tan(theta)
-        const u1 = (x + Math.sqrt(discriminant)) / (2 * A); // Arc Haut (Clocher)
-        const u2 = (x - Math.sqrt(discriminant)) / (2 * A); // Arc Bas (Tendu)
+        const u1 = (x + Math.sqrt(discriminant)) / (2 * A); 
+        const u2 = (x - Math.sqrt(discriminant)) / (2 * A); 
 
-        // Conversion en degrés
-        const deg1 = Math.atan(u2) * (180 / Math.PI); // Tendu
-        const deg2 = Math.atan(u1) * (180 / Math.PI); // Clocher
+        const deg1 = Math.atan(u2) * (180 / Math.PI); 
+        const deg2 = Math.atan(u1) * (180 / Math.PI); 
         
-        // Application des contraintes mécaniques du mortier 82mm
         const res = { 
             bas: deg1 >= 25 ? `${deg1.toFixed(1)}°` : "HORS PORTÉE", 
             haut: deg2 <= 85 ? `${deg2.toFixed(1)}°` : "HORS PORTÉE" 
@@ -238,12 +234,19 @@
         let angle = Math.atan2(dy, dx) * (180 / Math.PI);
         let azimut = (90 - angle + 360) % 360; 
 
-        // Récupération des valeurs du HUD
         const v0 = parseFloat(document.getElementById('charge-select').value);
-        const altMortier = parseFloat(document.getElementById('alt-mortier').value) || 0;
-        const altCible = parseFloat(document.getElementById('alt-cible').value) || 0;
         
-        // Calcul
+        // LOGIQUE D'ALTITUDE INTELLIGENTE
+        let valM = document.getElementById('alt-mortier').value;
+        let valC = document.getElementById('alt-cible').value;
+        
+        let altMortier = valM !== "" ? parseFloat(valM) : 0;
+        let altCible = valC !== "" ? parseFloat(valC) : 0;
+        
+        // Si une seule des deux cases est remplie, l'autre prend la même valeur par défaut
+        if (valM === "" && valC !== "") altMortier = altCible;
+        if (valC === "" && valM !== "") altCible = altMortier;
+        
         const tir = calculerTir3D(distMeters, v0, DONNEES_GRAVITE, altMortier, altCible);
         
         document.getElementById('hud-dist').innerText = `${distMeters}m`;
