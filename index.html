@@ -45,8 +45,8 @@
         .tactical-marker { position: relative; display: flex; align-items: center; justify-content: center; overflow: visible !important; }
         .dir-arrow { position: absolute; font-size: 18px; font-weight: bold; z-index: 1; }
 
-        /* HUD ARTILLERIE */
-        #artillery-hud { position: absolute; top: 15px; right: 15px; width: 260px; background: rgba(13, 17, 23, 0.95); border: 1px solid var(--orange); border-radius: 4px; padding: 10px; font-family: 'JetBrains Mono', monospace; color: white; z-index: 1002; display: none; box-shadow: 0 0 15px rgba(255, 157, 0, 0.2); }
+        /* HUD ARTILLERIE - MODIFIÉ (Largeur 300px pour l'espace du temps de vol) */
+        #artillery-hud { position: absolute; top: 15px; right: 15px; width: 300px; background: rgba(13, 17, 23, 0.95); border: 1px solid var(--orange); border-radius: 4px; padding: 10px; font-family: 'JetBrains Mono', monospace; color: white; z-index: 1002; display: none; box-shadow: 0 0 15px rgba(255, 157, 0, 0.2); }
         #artillery-hud .hud-header { font-family: 'Orbitron', sans-serif; color: var(--orange); text-align: center; font-size: 0.8rem; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
         #artillery-hud .hud-data { font-size: 0.65rem; line-height: 1.5; color: #8892b0; }
         #artillery-hud .hud-data b { color: white; font-size: 0.7rem; }
@@ -157,8 +157,8 @@
             <p>DISTANCE HORIZONTALE : <b id="hud-dist">--</b></p>
             <p>AZIMUT : <b id="hud-azimut">--</b></p>
             <div style="border-top: 1px solid #333; margin: 6px 0;"></div>
-            <p style="color: var(--primary)">ÉLÉVATION (HAUTE) : <b id="hud-elev-haut">--</b></p>
-            <p style="color: var(--blue)">ÉLÉVATION (TENDUE) : <b id="hud-elev-bas">--</b></p>
+            <p style="color: var(--primary)">ÉLÉV (HAUTE) : <b id="hud-elev-haut">--</b> | VOL: <b id="hud-temps-haut">--</b></p>
+            <p style="color: var(--blue)">ÉLÉV (TENDUE) : <b id="hud-elev-bas">--</b> | VOL: <b id="hud-temps-bas">--</b></p>
         </div>
     </div>
 
@@ -206,15 +206,27 @@
 
         if (discriminant < 0) return null; 
 
+        // Angles en radians
         const u1 = (x + Math.sqrt(discriminant)) / (2 * A); 
         const u2 = (x - Math.sqrt(discriminant)) / (2 * A); 
 
-        const deg1 = Math.atan(u2) * (180 / Math.PI); 
-        const deg2 = Math.atan(u1) * (180 / Math.PI); 
+        const rad1 = Math.atan(u2); // Arc Bas (Tendu)
+        const rad2 = Math.atan(u1); // Arc Haut (Clocher)
+
+        // Conversion en degrés
+        const deg1 = rad1 * (180 / Math.PI); 
+        const deg2 = rad2 * (180 / Math.PI); 
         
+        // --- NOUVEAU : CALCUL DU TEMPS DE VOL ---
+        // Temps = Distance horizontale / (vitesse initiale * cos(angle))
+        const t1 = x / (v0 * Math.cos(rad1));
+        const t2 = x / (v0 * Math.cos(rad2));
+
         const res = { 
             bas: deg1 >= 25 ? `${deg1.toFixed(1)}°` : "HORS PORTÉE", 
-            haut: deg2 <= 85 ? `${deg2.toFixed(1)}°` : "HORS PORTÉE" 
+            haut: deg2 <= 85 ? `${deg2.toFixed(1)}°` : "HORS PORTÉE",
+            tempsBas: deg1 >= 25 ? `${t1.toFixed(1)}s` : "--",
+            tempsHaut: deg2 <= 85 ? `${t2.toFixed(1)}s` : "--"
         };
         
         if (deg1 < 25 && deg2 > 85) return null; 
@@ -253,11 +265,15 @@
         
         if (tir) {
             document.getElementById('hud-elev-haut').innerText = tir.haut;
+            document.getElementById('hud-temps-haut').innerText = tir.tempsHaut;
             document.getElementById('hud-elev-bas').innerText = tir.bas;
+            document.getElementById('hud-temps-bas').innerText = tir.tempsBas;
             updateStatus("CIBLE VERROUILLÉE");
         } else {
             document.getElementById('hud-elev-haut').innerText = "HORS PORTÉE";
+            document.getElementById('hud-temps-haut').innerText = "--";
             document.getElementById('hud-elev-bas').innerText = "HORS PORTÉE";
+            document.getElementById('hud-temps-bas').innerText = "--";
             updateStatus("CHANGEZ DE CHARGE / TROP LOIN");
         }
     }
@@ -324,7 +340,6 @@
                     layer = L.marker([p.x, p.y], { icon: L.divIcon({ className: '', html: customHtml, iconSize: [size, size], iconAnchor: [size/2, size/2] }) });
                 }
                 
-                // MODIFICATION : On transmet le clic à la carte si on est en mode "mesure"
                 if (layer) { 
                     layer.on('click', (e) => { 
                         if (interMode === 'ADD' && currentType === 'mesure') {
@@ -367,7 +382,10 @@
                 document.getElementById('hud-dist').innerText = "CALCUL EN COURS...";
                 document.getElementById('hud-azimut').innerText = "--";
                 document.getElementById('hud-elev-haut').innerText = "--";
+                document.getElementById('hud-temps-haut').innerText = "--";
                 document.getElementById('hud-elev-bas').innerText = "--";
+                document.getElementById('hud-temps-bas').innerText = "--";
+                
                 drawingPolyline = L.polyline([pos, pos], {color: '#000000', dashArray: '5, 10'}).addTo(map);
             } else {
                 artillerieCible.p1 = pointsBuffer[0]; 
