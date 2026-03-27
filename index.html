@@ -51,6 +51,10 @@
         #artillery-hud .hud-data { font-size: 0.65rem; line-height: 1.5; color: #8892b0; }
         #artillery-hud .hud-data b { color: white; font-size: 0.7rem; }
         #artillery-hud .close-hud { position: absolute; top: 5px; right: 5px; background: none; border: none; color: var(--red); cursor: pointer; font-weight: bold; }
+        
+        /* SELECTEUR DE CHARGE */
+        #charge-select { background: rgba(0,0,0,0.5); color: var(--orange); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; margin-top: 5px; cursor: pointer; outline: none; border-radius: 3px; }
+        #charge-select option { background: #111; color: white; }
     </style>
 </head>
 <body>
@@ -121,8 +125,17 @@
 
     <div id="artillery-hud">
         <button class="close-hud" onclick="fermerHud()">X</button>
-        <div class="hud-header">RAPPORT BALISTIQUE (82mm)</div>
+        <div class="hud-header">RAPPORT BALISTIQUE</div>
+        
         <div class="hud-data">
+            <label style="color:var(--orange); font-weight:bold;">SÉLECTION CHARGE (82mm):</label>
+            <select id="charge-select" onchange="majArtillerie()">
+                <option value="70">CHARGE 0 (Proche, ~70 m/s)</option>
+                <option value="140">CHARGE 1 (Moyenne, ~140 m/s)</option>
+                <option value="200" selected>CHARGE 2 (Lointaine, ~200 m/s)</option>
+            </select>
+            
+            <div style="border-top: 1px solid #333; margin: 8px 0;"></div>
             <p>DISTANCE : <b id="hud-dist">--</b></p>
             <p>AZIMUT : <b id="hud-azimut">--</b></p>
             <div style="border-top: 1px solid #333; margin: 6px 0;"></div>
@@ -142,8 +155,9 @@
     map.fitBounds(bounds);
 
     // --- CONFIGURATION ARTILLERIE ---
-    const ECHELLE_PXM = 0.0707; // CORRECTION: 100 pixels = 1414.21m (diagonale 1kmx1km)
-    const DONNEES_82MM = { v0: 200, gravite: 9.81 }; 
+    const ECHELLE_PXM = 0.0707; // 100 pixels = 1414.21m (diagonale 1kmx1km)
+    const DONNEES_GRAVITE = 9.81; 
+    let artillerieCible = { p1: null, p2: null }; // Stocke les positions pour recalculer en direct
 
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
     let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0, isMuted = false;
@@ -166,15 +180,49 @@
     // --- FONCTIONS BALISTIQUES & HUD ---
     function calculerTir(distM, v0, g) {
         const unit = (v0 * v0) / (g * distM);
-        if (unit < 1) return null;
+        if (unit < 1) return null; // Hors de portée pour cette charge
         const angleRad = 0.5 * Math.asin(1 / unit);
         const deg1 = angleRad * (180 / Math.PI);
         const deg2 = 90 - deg1;
         return { bas: deg1.toFixed(1), haut: deg2.toFixed(1) };
     }
 
+    // Fonction appelée au 2ème clic ET quand on change la charge dans le menu déroulant
+    function majArtillerie() {
+        if (!artillerieCible.p1 || !artillerieCible.p2) return;
+        
+        const p1 = artillerieCible.p1;
+        const p2 = artillerieCible.p2;
+        
+        const distPixels = Math.sqrt(Math.pow(p2[1]-p1[1], 2) + Math.pow(p2[0]-p1[0], 2));
+        const distMeters = (distPixels / ECHELLE_PXM).toFixed(0);
+        
+        let dx = p2[1] - p1[1];
+        let dy = p2[0] - p1[0];
+        let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        let azimut = (90 - angle + 360) % 360; 
+
+        // On récupère la vitesse (v0) choisie dans le sélecteur
+        const v0 = parseFloat(document.getElementById('charge-select').value);
+        const tir = calculerTir(distMeters, v0, DONNEES_GRAVITE);
+        
+        document.getElementById('hud-dist').innerText = `${distMeters}m`;
+        document.getElementById('hud-azimut').innerText = `${azimut.toFixed(1)}°`;
+        
+        if (tir) {
+            document.getElementById('hud-elev-haut').innerText = `${tir.haut}°`;
+            document.getElementById('hud-elev-bas').innerText = `${tir.bas}°`;
+            updateStatus("CIBLE VERROUILLÉE");
+        } else {
+            document.getElementById('hud-elev-haut').innerText = "HORS PORTÉE";
+            document.getElementById('hud-elev-bas').innerText = "HORS PORTÉE";
+            updateStatus("CHANGEZ DE CHARGE");
+        }
+    }
+
     function fermerHud() {
         document.getElementById('artillery-hud').style.display = 'none';
+        artillerieCible = { p1: null, p2: null };
         if (currentType === 'mesure') {
             pointsBuffer = [];
             if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
@@ -283,6 +331,9 @@
         if (currentType === 'mesure') {
             pointsBuffer.push(pos);
             if (pointsBuffer.length === 1) {
+                // S'il y avait une ancienne ligne de mesure, on l'efface
+                if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+                
                 updateStatus("CLIQUEZ SUR LA CIBLE...");
                 document.getElementById('artillery-hud').style.display = 'block';
                 document.getElementById('hud-dist').innerText = "CALCUL EN COURS...";
@@ -291,34 +342,17 @@
                 document.getElementById('hud-elev-bas').innerText = "--";
                 drawingPolyline = L.polyline([pos, pos], {color: '#ff9d00', dashArray: '5, 10'}).addTo(map);
             } else {
-                const p1 = pointsBuffer[0]; 
-                const p2 = pointsBuffer[1]; 
+                // On enregistre les deux points pour le recalcul en direct
+                artillerieCible.p1 = pointsBuffer[0]; 
+                artillerieCible.p2 = pointsBuffer[1]; 
                 
-                const distPixels = Math.sqrt(Math.pow(p2[1]-p1[1], 2) + Math.pow(p2[0]-p1[0], 2));
-                const distMeters = (distPixels / ECHELLE_PXM).toFixed(0);
+                // On fige la ligne sur la cible
+                if (drawingPolyline) drawingPolyline.setLatLngs([artillerieCible.p1, artillerieCible.p2]);
                 
-                let dx = p2[1] - p1[1];
-                let dy = p2[0] - p1[0];
-                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                let azimut = (90 - angle + 360) % 360; 
-
-                const tir = calculerTir(distMeters, DONNEES_82MM.v0, DONNEES_82MM.gravite);
-                
-                document.getElementById('hud-dist').innerText = `${distMeters}m`;
-                document.getElementById('hud-azimut').innerText = `${azimut.toFixed(1)}°`;
-                
-                if (tir) {
-                    document.getElementById('hud-elev-haut').innerText = `${tir.haut}°`;
-                    document.getElementById('hud-elev-bas').innerText = `${tir.bas}°`;
-                    updateStatus("CIBLE VERROUILLÉE");
-                } else {
-                    document.getElementById('hud-elev-haut').innerText = "HORS DE PORTÉE";
-                    document.getElementById('hud-elev-bas').innerText = "HORS DE PORTÉE";
-                    updateStatus("CIBLE HORS DE PORTÉE");
-                }
+                // On lance le calcul
+                majArtillerie();
                 
                 pointsBuffer = [];
-                if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
             }
             return;
         }
