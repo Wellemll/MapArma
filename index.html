@@ -136,9 +136,9 @@
         <div class="hud-data">
             <label style="color:var(--orange); font-weight:bold;">SÉLECTION CHARGE (82mm):</label>
             <select id="charge-select" onchange="majArtillerie()">
-                <option value="70">CHARGE 0 (Proche, ~70 m/s)</option>
-                <option value="140">CHARGE 1 (Moyenne, ~140 m/s)</option>
-                <option value="200" selected>CHARGE 2 (Lointaine, ~200 m/s)</option>
+                <option value="70">CHARGE 0 (~70 m/s)</option>
+                <option value="140">CHARGE 1 (~140 m/s)</option>
+                <option value="200" selected>CHARGE 2 (~200 m/s)</option>
             </select>
             
             <div class="alt-container">
@@ -194,19 +194,21 @@
         'Dot': { isVector: true }
     };
 
+    // --- CORRECTION DU CALCUL BALISTIQUE ---
     function calculerTir3D(distM, v0, g, altShooter, altTarget) {
-        if (distM === 0) return null;
+        // IMPORTANT : S'assurer que 'distM' est manipulé comme un nombre (et non du texte) pour éviter les bugs de concaténation JavaScript
+        const x = parseFloat(distM); 
+        if (x === 0 || isNaN(x)) return null;
 
-        const x = distM; 
-        const y = altTarget - altShooter; 
+        const y = parseFloat(altTarget) - parseFloat(altShooter); 
         
         const A = (g * x * x) / (2 * v0 * v0);
         const discriminant = (x * x) - (4 * A * (A + y));
 
-        // Si la cible est physiquement inatteignable avec cette charge
+        // Si le discriminant est négatif, la cible est purement hors de portée physique de l'obus
         if (discriminant < 0) return null; 
 
-        // Angles en radians
+        // Calcul des angles en radians
         const u1 = (x + Math.sqrt(discriminant)) / (2 * A); 
         const u2 = (x - Math.sqrt(discriminant)) / (2 * A); 
 
@@ -221,7 +223,7 @@
         const t1 = x / (v0 * Math.cos(rad1));
         const t2 = x / (v0 * Math.cos(rad2));
 
-        // TOUTES LES RESTRICTIONS D'ANGLE SONT LEVÉES
+        // TOUTES RESTRICTIONS D'ANGLES SONT DÉSACTIVÉES
         return { 
             bas: `${deg1.toFixed(1)}°`, 
             haut: `${deg2.toFixed(1)}°`,
@@ -271,7 +273,7 @@
             document.getElementById('hud-temps-haut').innerText = "--";
             document.getElementById('hud-elev-bas').innerText = "HORS PORTÉE";
             document.getElementById('hud-temps-bas').innerText = "--";
-            updateStatus("CHANGEZ DE CHARGE / TROP LOIN");
+            updateStatus("CIBLE HORS PORTÉE (TROP LOIN)");
         }
     }
 
