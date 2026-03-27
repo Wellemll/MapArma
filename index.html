@@ -142,7 +142,7 @@
     map.fitBounds(bounds);
 
     // --- CONFIGURATION ARTILLERIE ---
-    const ECHELLE_PXM = 1; // MODIFIE CECI : Nombre de pixels pour 1 mètre. (ex: 0.1)
+    const ECHELLE_PXM = 0.1; // MODIFIÉ : 100 pixels = 1000m (1 chunk). Donc 1 pixel = 10m.
     const DONNEES_82MM = { v0: 200, gravite: 9.81 }; // Vitesse de base du mortier 82mm
 
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
