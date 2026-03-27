@@ -52,9 +52,12 @@
         #artillery-hud .hud-data b { color: white; font-size: 0.7rem; }
         #artillery-hud .close-hud { position: absolute; top: 5px; right: 5px; background: none; border: none; color: var(--red); cursor: pointer; font-weight: bold; }
         
-        /* SELECTEUR DE CHARGE */
-        #charge-select { background: rgba(0,0,0,0.5); color: var(--orange); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; margin-top: 5px; cursor: pointer; outline: none; border-radius: 3px; }
+        /* SELECTEUR DE CHARGE ET INPUT ALTITUDE */
+        #charge-select, .alt-input { background: rgba(0,0,0,0.5); color: var(--orange); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; box-sizing: border-box; outline: none; border-radius: 3px; }
         #charge-select option { background: #111; color: white; }
+        .alt-input { margin-top: 2px; color: white; }
+        .alt-container { display: flex; gap: 5px; margin-top: 5px; }
+        .alt-box { flex: 1; text-align: center; }
     </style>
 </head>
 <body>
@@ -135,8 +138,19 @@
                 <option value="200" selected>CHARGE 2 (Lointaine, ~200 m/s)</option>
             </select>
             
+            <div class="alt-container">
+                <div class="alt-box">
+                    <label>ALT. MORTIER</label>
+                    <input type="number" id="alt-mortier" class="alt-input" value="0" step="10" oninput="majArtillerie()">
+                </div>
+                <div class="alt-box">
+                    <label>ALT. CIBLE</label>
+                    <input type="number" id="alt-cible" class="alt-input" value="0" step="10" oninput="majArtillerie()">
+                </div>
+            </div>
+            
             <div style="border-top: 1px solid #333; margin: 8px 0;"></div>
-            <p>DISTANCE : <b id="hud-dist">--</b></p>
+            <p>DISTANCE HORIZONTALE : <b id="hud-dist">--</b></p>
             <p>AZIMUT : <b id="hud-azimut">--</b></p>
             <div style="border-top: 1px solid #333; margin: 6px 0;"></div>
             <p style="color: var(--primary)">ÉLÉVATION (HAUTE) : <b id="hud-elev-haut">--</b></p>
@@ -157,7 +171,7 @@
     // --- CONFIGURATION ARTILLERIE ---
     const ECHELLE_PXM = 0.0707; // 100 pixels = 1414.21m (diagonale 1kmx1km)
     const DONNEES_GRAVITE = 9.81; 
-    let artillerieCible = { p1: null, p2: null }; // Stocke les positions pour recalculer en direct
+    let artillerieCible = { p1: null, p2: null }; 
 
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
     let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0, isMuted = false;
@@ -177,14 +191,27 @@
         'Dot': { isVector: true }
     };
 
-    // --- FONCTIONS BALISTIQUES & HUD LIMITÉES 25°-85° ---
-    function calculerTir(distM, v0, g) {
-        const unit = (v0 * v0) / (g * distM);
-        if (unit < 1) return null; // Trop loin pour la charge
+    // --- FONCTIONS BALISTIQUES AVEC ALTITUDE (3D) ---
+    function calculerTir3D(distM, v0, g, altShooter, altTarget) {
+        if (distM === 0) return null;
+
+        const x = distM; // Distance horizontale
+        const y = altTarget - altShooter; // Différence d'altitude (y positif si la cible est plus haute)
         
-        const angleRad = 0.5 * Math.asin(1 / unit);
-        const deg1 = angleRad * (180 / Math.PI); // Tendu (Arc bas)
-        const deg2 = 90 - deg1; // Clocher (Arc haut)
+        // Résolution de l'équation de trajectoire balistique
+        const A = (g * x * x) / (2 * v0 * v0);
+        const discriminant = (x * x) - (4 * A * (A + y));
+
+        // Si le discriminant est négatif, la cible est hors de portée physique
+        if (discriminant < 0) return null; 
+
+        // Les deux solutions pour u = tan(theta)
+        const u1 = (x + Math.sqrt(discriminant)) / (2 * A); // Arc Haut (Clocher)
+        const u2 = (x - Math.sqrt(discriminant)) / (2 * A); // Arc Bas (Tendu)
+
+        // Conversion en degrés
+        const deg1 = Math.atan(u2) * (180 / Math.PI); // Tendu
+        const deg2 = Math.atan(u1) * (180 / Math.PI); // Clocher
         
         // Application des contraintes mécaniques du mortier 82mm
         const res = { 
@@ -192,7 +219,6 @@
             haut: deg2 <= 85 ? `${deg2.toFixed(1)}°` : "HORS PORTÉE" 
         };
         
-        // Si la cible est trop près, les DEUX arcs sont impossibles
         if (deg1 < 25 && deg2 > 85) return null; 
         
         return res;
@@ -212,8 +238,13 @@
         let angle = Math.atan2(dy, dx) * (180 / Math.PI);
         let azimut = (90 - angle + 360) % 360; 
 
+        // Récupération des valeurs du HUD
         const v0 = parseFloat(document.getElementById('charge-select').value);
-        const tir = calculerTir(distMeters, v0, DONNEES_GRAVITE);
+        const altMortier = parseFloat(document.getElementById('alt-mortier').value) || 0;
+        const altCible = parseFloat(document.getElementById('alt-cible').value) || 0;
+        
+        // Calcul
+        const tir = calculerTir3D(distMeters, v0, DONNEES_GRAVITE, altMortier, altCible);
         
         document.getElementById('hud-dist').innerText = `${distMeters}m`;
         document.getElementById('hud-azimut').innerText = `${azimut.toFixed(1)}°`;
@@ -223,10 +254,9 @@
             document.getElementById('hud-elev-bas').innerText = tir.bas;
             updateStatus("CIBLE VERROUILLÉE");
         } else {
-            // Si la fonction retourne null, cela signifie que la cible est hors de portée absolue (trop loin OU trop près)
             document.getElementById('hud-elev-haut').innerText = "HORS PORTÉE";
             document.getElementById('hud-elev-bas').innerText = "HORS PORTÉE";
-            updateStatus("CHANGEZ DE CHARGE");
+            updateStatus("CHANGEZ DE CHARGE / TROP LOIN");
         }
     }
 
@@ -356,7 +386,7 @@
                 
                 if (drawingPolyline) drawingPolyline.setLatLngs([artillerieCible.p1, artillerieCible.p2]);
                 
-                majArtillerie(); // Appel direct de la fonction de calcul mise à jour
+                majArtillerie(); 
                 
                 pointsBuffer = [];
             }
