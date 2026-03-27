@@ -177,17 +177,27 @@
         'Dot': { isVector: true }
     };
 
-    // --- FONCTIONS BALISTIQUES & HUD ---
+    // --- FONCTIONS BALISTIQUES & HUD LIMITÉES 25°-85° ---
     function calculerTir(distM, v0, g) {
         const unit = (v0 * v0) / (g * distM);
-        if (unit < 1) return null; // Hors de portée pour cette charge
+        if (unit < 1) return null; // Trop loin pour la charge
+        
         const angleRad = 0.5 * Math.asin(1 / unit);
-        const deg1 = angleRad * (180 / Math.PI);
-        const deg2 = 90 - deg1;
-        return { bas: deg1.toFixed(1), haut: deg2.toFixed(1) };
+        const deg1 = angleRad * (180 / Math.PI); // Tendu (Arc bas)
+        const deg2 = 90 - deg1; // Clocher (Arc haut)
+        
+        // Application des contraintes mécaniques du mortier 82mm
+        const res = { 
+            bas: deg1 >= 25 ? `${deg1.toFixed(1)}°` : "HORS PORTÉE", 
+            haut: deg2 <= 85 ? `${deg2.toFixed(1)}°` : "HORS PORTÉE" 
+        };
+        
+        // Si la cible est trop près, les DEUX arcs sont impossibles
+        if (deg1 < 25 && deg2 > 85) return null; 
+        
+        return res;
     }
 
-    // Fonction appelée au 2ème clic ET quand on change la charge dans le menu déroulant
     function majArtillerie() {
         if (!artillerieCible.p1 || !artillerieCible.p2) return;
         
@@ -202,7 +212,6 @@
         let angle = Math.atan2(dy, dx) * (180 / Math.PI);
         let azimut = (90 - angle + 360) % 360; 
 
-        // On récupère la vitesse (v0) choisie dans le sélecteur
         const v0 = parseFloat(document.getElementById('charge-select').value);
         const tir = calculerTir(distMeters, v0, DONNEES_GRAVITE);
         
@@ -210,10 +219,11 @@
         document.getElementById('hud-azimut').innerText = `${azimut.toFixed(1)}°`;
         
         if (tir) {
-            document.getElementById('hud-elev-haut').innerText = `${tir.haut}°`;
-            document.getElementById('hud-elev-bas').innerText = `${tir.bas}°`;
+            document.getElementById('hud-elev-haut').innerText = tir.haut;
+            document.getElementById('hud-elev-bas').innerText = tir.bas;
             updateStatus("CIBLE VERROUILLÉE");
         } else {
+            // Si la fonction retourne null, cela signifie que la cible est hors de portée absolue (trop loin OU trop près)
             document.getElementById('hud-elev-haut').innerText = "HORS PORTÉE";
             document.getElementById('hud-elev-bas').innerText = "HORS PORTÉE";
             updateStatus("CHANGEZ DE CHARGE");
@@ -331,7 +341,6 @@
         if (currentType === 'mesure') {
             pointsBuffer.push(pos);
             if (pointsBuffer.length === 1) {
-                // S'il y avait une ancienne ligne de mesure, on l'efface
                 if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
                 
                 updateStatus("CLIQUEZ SUR LA CIBLE...");
@@ -342,15 +351,12 @@
                 document.getElementById('hud-elev-bas').innerText = "--";
                 drawingPolyline = L.polyline([pos, pos], {color: '#ff9d00', dashArray: '5, 10'}).addTo(map);
             } else {
-                // On enregistre les deux points pour le recalcul en direct
                 artillerieCible.p1 = pointsBuffer[0]; 
                 artillerieCible.p2 = pointsBuffer[1]; 
                 
-                // On fige la ligne sur la cible
                 if (drawingPolyline) drawingPolyline.setLatLngs([artillerieCible.p1, artillerieCible.p2]);
                 
-                // On lance le calcul
-                majArtillerie();
+                majArtillerie(); // Appel direct de la fonction de calcul mise à jour
                 
                 pointsBuffer = [];
             }
