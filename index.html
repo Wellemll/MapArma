@@ -355,8 +355,8 @@
                 document.getElementById('hud-azimut').innerText = "--";
                 document.getElementById('hud-elev-haut').innerText = "--";
                 document.getElementById('hud-elev-bas').innerText = "--";
-                // CORRECTION DE L'ERREUR DE SYNTAXE ICI
-                drawingPolyline = L.polyline([pos, pos], {color: '#ff9d00', dashArray: '5, 10'}).addTo(map);
+                // MODIFICATION ICI : Ligne de visée temporaire en NOIR
+                drawingPolyline = L.polyline([pos, pos], {color: '#000000', dashArray: '5, 10'}).addTo(map);
             } else {
                 artillerieCible.p1 = pointsBuffer[0]; 
                 artillerieCible.p2 = pointsBuffer[1]; 
@@ -367,11 +367,12 @@
                 const azimut = document.getElementById('hud-azimut').innerText;
                 const tooltipText = `DIST: ${distMeters} | AZ: ${azimut}`;
                 
+                // MODIFICATION ICI : Sauvegarde de la ligne en NOIR (#000000)
                 save({ 
                     x: artillerieCible.p1[0], y: artillerieCible.p1[1],
                     type: 'mesure_line', 
                     points_json: JSON.stringify([artillerieCible.p1, artillerieCible.p2]), 
-                    label: `#ff9d00|40|${tooltipText}` 
+                    label: `#000000|40|${tooltipText}` 
                 });
                 
                 pointsBuffer = [];
