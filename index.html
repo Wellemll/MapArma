@@ -226,7 +226,6 @@
     let drawingPolyline; 
     let pendingIconPos = null;
     
-    // Variables pour l'itinéraire
     let routePoints = [];
     let routePolyline = null;
     let currentRouteDist = 0;
@@ -364,7 +363,6 @@
         }
     }
 
-    // FONCTIONS POUR L'ITINÉRAIRE
     function majRoute() {
         document.getElementById('route-dist').innerText = `${currentRouteDist.toFixed(0)}m`;
         const speedKmh = parseFloat(document.getElementById('transport-select').value);
@@ -470,10 +468,21 @@
                 else if (p.points_json) { 
                     const pts = JSON.parse(p.points_json);
                     if (p.type === 'mesure_line') {
-                        layer = L.polyline(pts, {color: color, weight: 3, dashArray: '5, 10', bubblingMouseEvents: true});
+                        const isRoute = parts[2] && parts[2].includes("ROUTE");
+                        let line = L.polyline(pts, {color: color, weight: 3, dashArray: '5, 10', bubblingMouseEvents: true});
+                        
+                        if (!isRoute) {
+                            // C'est un tir d'artillerie : on ajoute la Kill Zone de 35m au point d'impact (pts[1])
+                            let killRadiusPx = 35 * ECHELLE_PXM;
+                            let circle = L.circle(pts[1], {radius: killRadiusPx, color: '#ff3e3e', fillColor: '#ff3e3e', fillOpacity: 0.3, weight: 1, bubblingMouseEvents: true});
+                            layer = L.featureGroup([line, circle]);
+                        } else {
+                            // C'est un itinéraire, on garde juste la ligne
+                            layer = L.featureGroup([line]);
+                        }
+                        
                         if (parts[2]) {
-                            // On ajoute la classe "tooltip-route" si le texte contient "ROUTE" pour la couleur bleue, sinon orange
-                            const tipClass = parts[2].includes("ROUTE") ? 'tooltip-route' : 'tooltip-artillery';
+                            const tipClass = isRoute ? 'tooltip-route' : 'tooltip-artillery';
                             layer.bindTooltip(parts[2], {className: tipClass, sticky: true, direction: 'center'});
                         }
                     } else if (p.type.startsWith('zone')) {
@@ -523,7 +532,6 @@
         if (interMode !== 'ADD') return;
         const pos = [e.latlng.lat, e.latlng.lng];
 
-        // LOGIQUE POUR LA ROUTE / ITINÉRAIRE
         if (currentType === 'route') {
             routePoints.push(pos);
             
