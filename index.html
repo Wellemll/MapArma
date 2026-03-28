@@ -135,17 +135,17 @@
         <div class="hud-data">
             <label style="color:var(--orange); font-weight:bold;">SÉLECTION CHARGE (M252 81mm):</label>
             <select id="charge-select" onchange="updateV0()">
-                <option value="42.77">CHARGE 0 (IRL: 42.77 m/s)</option>
-                <option value="97">CHARGE 1 (RHS: 97 m/s)</option>
-                <option value="189" selected>CHARGE 2 (RHS: 189 m/s)</option>
-                <option value="700">CHARGE 3 (RHS: 700 m/s)</option>
-                <option value="4630">CHARGE 4 (RHS: 4630 m/s)</option>
+                <option value="42">CHARGE 0 (RHS: 42 m/s)</option>
+                <option value="94">CHARGE 1 (RHS: 94 m/s)</option>
+                <option value="188" selected>CHARGE 2 (RHS: 188 m/s)</option>
+                <option value="425">CHARGE 3 (RHS: 425 m/s)</option>
+                <option value="1675">CHARGE 4 (RHS: 1675 m/s)</option>
             </select>
             
             <div class="alt-container" style="background: rgba(255, 157, 0, 0.1); padding: 5px; border-radius: 4px; border: 1px dashed var(--orange); margin-bottom: 5px;">
                 <div class="alt-box">
                     <label style="color:var(--blue);">VITESSE (m/s)</label>
-                    <input type="number" id="v0-input" class="alt-input" value="189" step="0.01" oninput="majArtillerie()">
+                    <input type="number" id="v0-input" class="alt-input" value="188" step="0.01" oninput="majArtillerie()">
                 </div>
                 <div class="alt-box">
                     <label style="color:var(--red);">COEFF. AIR</label>
@@ -289,9 +289,9 @@
         if (!verifBas || Math.abs(verifBas.distance - distCible) > 5) angleBas = null;
 
         return {
-            haut: angleHaut ? `${angleHaut.toFixed(1)}°` : "HORS PORTÉE",
+            haut: angleHaut ? `${angleHaut.toFixed(2)}°` : "HORS PORTÉE",
             tempsHaut: angleHaut ? `${tempsHaut.toFixed(1)}s` : "--",
-            bas: angleBas ? `${angleBas.toFixed(1)}°` : "HORS PORTÉE",
+            bas: angleBas ? `${angleBas.toFixed(2)}°` : "HORS PORTÉE",
             tempsBas: angleBas ? `${tempsBas.toFixed(1)}s` : "--"
         };
     }
@@ -457,12 +457,13 @@
                 let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 let azimut = (90 - angle + 360) % 360; 
                 
+                // AZIMUT AVEC 2 DÉCIMALES ICI
                 document.getElementById('dist-input').value = distMeters;
-                document.getElementById('hud-azimut').innerText = `${azimut.toFixed(1)}°`;
+                document.getElementById('hud-azimut').innerText = `${azimut.toFixed(2)}°`;
                 
                 majArtillerie(); 
 
-                const tooltipText = `DIST: ${distMeters}m | AZ: ${azimut.toFixed(1)}°`;
+                const tooltipText = `DIST: ${distMeters}m | AZ: ${azimut.toFixed(2)}°`;
                 
                 save({ 
                     x: artillerieCible.p1[0], y: artillerieCible.p1[1],
