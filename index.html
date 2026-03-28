@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL | HD NATO STD</title>
+    <title>ALTIS COMMAND TERMINAL | HD NATO STD (RHS PHYSICS)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -41,18 +41,16 @@
         .btn-util.active { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
         .clear-all { margin-top: auto; color: var(--red); border: 1px solid var(--red); background: transparent; padding: 8px; cursor: pointer; font-size: 0.6rem; opacity: 0.7; }
         
-        /* Tactical Marker Arrow Styles */
         .tactical-marker { position: relative; display: flex; align-items: center; justify-content: center; overflow: visible !important; }
         .dir-arrow { position: absolute; font-size: 18px; font-weight: bold; z-index: 1; }
 
         /* HUD ARTILLERIE */
-        #artillery-hud { position: absolute; top: 15px; right: 15px; width: 300px; background: rgba(13, 17, 23, 0.95); border: 1px solid var(--orange); border-radius: 4px; padding: 10px; font-family: 'JetBrains Mono', monospace; color: white; z-index: 1002; display: none; box-shadow: 0 0 15px rgba(255, 157, 0, 0.2); }
+        #artillery-hud { position: absolute; top: 15px; right: 15px; width: 320px; background: rgba(13, 17, 23, 0.95); border: 1px solid var(--orange); border-radius: 4px; padding: 10px; font-family: 'JetBrains Mono', monospace; color: white; z-index: 1002; display: none; box-shadow: 0 0 15px rgba(255, 157, 0, 0.2); }
         #artillery-hud .hud-header { font-family: 'Orbitron', sans-serif; color: var(--orange); text-align: center; font-size: 0.8rem; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
         #artillery-hud .hud-data { font-size: 0.65rem; line-height: 1.5; color: #8892b0; }
         #artillery-hud .hud-data b { color: white; font-size: 0.7rem; }
         #artillery-hud .close-hud { position: absolute; top: 5px; right: 5px; background: none; border: none; color: var(--red); cursor: pointer; font-weight: bold; }
         
-        /* SELECTEUR DE CHARGE ET INPUT ALTITUDE */
         #charge-select, .alt-input { background: rgba(0,0,0,0.5); color: var(--orange); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; box-sizing: border-box; outline: none; border-radius: 3px; margin-bottom: 4px;}
         #charge-select option { background: #111; color: white; }
         .alt-input { margin-top: 2px; color: white; }
@@ -60,7 +58,6 @@
         .alt-container { display: flex; gap: 5px; margin-top: 5px; }
         .alt-box { flex: 1; text-align: center; }
 
-        /* Tooltip Artillerie */
         .tooltip-artillery { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--orange) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--orange); }
     </style>
 </head>
@@ -132,7 +129,7 @@
 
     <div id="artillery-hud">
         <button class="close-hud" onclick="fermerHud()">X</button>
-        <div class="hud-header">RAPPORT BALISTIQUE</div>
+        <div class="hud-header">RAPPORT BALISTIQUE RHS</div>
         
         <div class="hud-data">
             <label style="color:var(--orange); font-weight:bold;">SÉLECTION CHARGE (81mm M252):</label>
@@ -147,12 +144,17 @@
             <div class="alt-container">
                 <div class="alt-box">
                     <label>ALT. TIREUR</label>
-                    <input type="number" id="alt-mortier" class="alt-input" placeholder="Auto" step="10" oninput="majArtillerie()">
+                    <input type="number" id="alt-mortier" class="alt-input" placeholder="Auto" step="1" oninput="majArtillerie()">
                 </div>
                 <div class="alt-box">
                     <label>ALT. CIBLE</label>
-                    <input type="number" id="alt-cible" class="alt-input" placeholder="Auto" step="10" oninput="majArtillerie()">
+                    <input type="number" id="alt-cible" class="alt-input" placeholder="Auto" step="1" oninput="majArtillerie()">
                 </div>
+            </div>
+
+            <div class="alt-box" style="margin-top: 5px;">
+                <label style="color:var(--red);">COEFF. AIR (RHS)</label>
+                <input type="number" id="air-friction" class="alt-input" style="color:var(--red); border-color:var(--red);" value="-0.00030" step="0.00005" oninput="majArtillerie()">
             </div>
             
             <div style="border-top: 1px solid #333; margin: 8px 0;"></div>
@@ -176,7 +178,6 @@
 
     // --- CONFIGURATION ARTILLERIE ---
     const ECHELLE_PXM = 0.0707; 
-    const DONNEES_GRAVITE = 9.81; 
     let artillerieCible = { p1: null, p2: null }; 
 
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
@@ -197,40 +198,100 @@
         'Dot': { isVector: true }
     };
 
-    // --- CALCUL BALISTIQUE (RÉPARÉ ET SANS LIMITE D'ANGLE) ---
-    function calculerTir3D(distM, v0, g, altShooter, altTarget) {
-        const x = parseFloat(distM); 
-        if (x === 0 || isNaN(x)) return null;
+    // --- MOTEUR PHYSIQUE SIMULATEUR RHS (MÉTHODE D'EULER + DICHOTOMIE) ---
+    function calculerTirRHS(distCible, v0, altShooter, altTarget) {
+        distCible = parseFloat(distCible);
+        altShooter = parseFloat(altShooter) || 0;
+        altTarget = parseFloat(altTarget) || 0;
+        let airFriction = parseFloat(document.getElementById('air-friction').value) || 0;
 
-        const y = parseFloat(altTarget) - parseFloat(altShooter); 
+        if (distCible === 0 || isNaN(distCible)) return null;
+
+        // Fonction qui simule physiquement le vol de l'obus pas par pas
+        function simulerVol(angleDeg) {
+            const dt = 0.02; // Pas de calcul : 20ms pour très haute précision
+            let x = 0;
+            let y = altShooter;
+            let vx = v0 * Math.cos(angleDeg * Math.PI / 180);
+            let vy = v0 * Math.sin(angleDeg * Math.PI / 180);
+            let t = 0;
+
+            // Limite de sécurité (si l'obus tombe très bas ou vole pendant plus de 200 secondes)
+            while (y >= Math.min(altShooter, altTarget) - 200 && t < 200) {
+                let v = Math.sqrt(vx*vx + vy*vy);
+                
+                // Mécanique de friction de l'air d'Arma 3 : accélération = friction * vitesse * vitesse
+                let ax = airFriction * v * vx;
+                let ay = airFriction * v * vy - 9.81;
+
+                vx += ax * dt;
+                vy += ay * dt;
+                
+                x += vx * dt;
+                y += vy * dt;
+                t += dt;
+
+                // L'obus passe sous l'altitude cible en redescendant (impact)
+                if (vy < 0 && y <= altTarget) {
+                    // Interpolation linéaire pour trouver la distance d'impact exacte
+                    let y_prev = y - vy * dt;
+                    let x_prev = x - vx * dt;
+                    let ratio = (altTarget - y) / (y_prev - y);
+                    let final_x = x - (x - x_prev) * ratio;
+                    return { distance: final_x, temps: t };
+                }
+            }
+            return null; // L'obus n'a jamais touché la cible
+        }
+
+        // BRUTE-FORCE : CHERCHE L'ARC HAUT (Entre 45° et 89.9°)
+        let minHaut = 45;
+        let maxHaut = 89.9;
+        let angleHaut = null;
+        let tempsHaut = null;
         
-        const A = (g * x * x) / (2 * v0 * v0);
-        const discriminant = (x * x) - (4 * A * (A + y));
+        for (let i = 0; i < 30; i++) {
+            let testAngle = (minHaut + maxHaut) / 2;
+            let sim = simulerVol(testAngle);
+            if (!sim) { maxHaut = testAngle; continue; }
+            
+            if (sim.distance > distCible) minHaut = testAngle; // Tire trop loin, il faut lever le canon
+            else maxHaut = testAngle; // Tire trop court, il faut baisser le canon
+            
+            angleHaut = testAngle;
+            tempsHaut = sim.temps;
+        }
 
-        // Si la cible est physiquement inatteignable avec cette charge
-        if (discriminant < 0) return null; 
+        // BRUTE-FORCE : CHERCHE L'ARC BAS (Entre 0.1° et 45°)
+        let minBas = 0.1;
+        let maxBas = 45;
+        let angleBas = null;
+        let tempsBas = null;
 
-        // Angles en radians
-        const u1 = (x + Math.sqrt(discriminant)) / (2 * A); 
-        const u2 = (x - Math.sqrt(discriminant)) / (2 * A); 
+        for (let i = 0; i < 30; i++) {
+            let testAngle = (minBas + maxBas) / 2;
+            let sim = simulerVol(testAngle);
+            if (!sim) { minBas = testAngle; continue; }
+            
+            if (sim.distance > distCible) maxBas = testAngle; // Tire trop loin, il faut baisser le canon
+            else minBas = testAngle; // Tire trop court, il faut lever le canon
+            
+            angleBas = testAngle;
+            tempsBas = sim.temps;
+        }
 
-        const rad1 = Math.atan(u2); // Arc Bas (Tendu)
-        const rad2 = Math.atan(u1); // Arc Haut (Clocher)
+        // Vérification de sécurité finale (Si la distance trouvée est à plus de 5 mètres de la cible = Inatteignable)
+        let verifHaut = simulerVol(angleHaut);
+        if (!verifHaut || Math.abs(verifHaut.distance - distCible) > 5) angleHaut = null;
 
-        // Conversion en degrés
-        const deg1 = rad1 * (180 / Math.PI); 
-        const deg2 = rad2 * (180 / Math.PI); 
-        
-        // Temps de vol en secondes
-        const t1 = x / (v0 * Math.cos(rad1));
-        const t2 = x / (v0 * Math.cos(rad2));
+        let verifBas = simulerVol(angleBas);
+        if (!verifBas || Math.abs(verifBas.distance - distCible) > 5) angleBas = null;
 
-        // TOUTES LES RESTRICTIONS D'ANGLE SONT LEVÉES
-        return { 
-            bas: `${deg1.toFixed(1)}°`, 
-            haut: `${deg2.toFixed(1)}°`,
-            tempsBas: `${t1.toFixed(1)}s`,
-            tempsHaut: `${t2.toFixed(1)}s`
+        return {
+            haut: angleHaut ? `${angleHaut.toFixed(1)}°` : "HORS PORTÉE",
+            tempsHaut: angleHaut ? `${tempsHaut.toFixed(1)}s` : "--",
+            bas: angleBas ? `${angleBas.toFixed(1)}°` : "HORS PORTÉE",
+            tempsBas: angleBas ? `${tempsBas.toFixed(1)}s` : "--"
         };
     }
 
@@ -259,7 +320,8 @@
         if (valM === "" && valC !== "") altMortier = altCible;
         if (valC === "" && valM !== "") altCible = altMortier;
         
-        const tir = calculerTir3D(distMeters, v0, DONNEES_GRAVITE, altMortier, altCible);
+        // APPEL AU NOUVEAU SIMULATEUR PHYSIQUE
+        const tir = calculerTirRHS(distMeters, v0, altMortier, altCible);
         
         document.getElementById('hud-dist').innerText = `${distMeters}m`;
         document.getElementById('hud-azimut').innerText = `${azimut.toFixed(1)}°`;
