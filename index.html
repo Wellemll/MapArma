@@ -110,6 +110,7 @@
             <div class="color-dot" style="background: #000000; border: 1px solid #333;" onclick="setColor('#000000', this)"></div>
         </div>
         <div class="section-label">OUTILS SPÉCIAUX</div>
+        <button class="btn-util" onclick="ouvrirHudManuel()">🧮 CALCUL MANUEL (SANS CARTE)</button>
         <button class="btn-util" style="color:var(--orange); border-color:var(--orange);" onclick="setType('mesure', this)">📏 RÈGLE ARTILLERIE</button>
         <button class="btn-util" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
         <button class="btn-util" onclick="setType('zone', this)">⬢ ZONE (3 CLICS)</button>
@@ -164,8 +165,18 @@
             </div>
             
             <div style="border-top: 1px solid #333; margin: 8px 0;"></div>
-            <p>DISTANCE HORIZONTALE : <b id="hud-dist">--</b></p>
-            <p>AZIMUT : <b id="hud-azimut">--</b></p>
+            
+            <div class="alt-container" style="margin-bottom: 8px;">
+                <div class="alt-box" style="flex: 1.5;">
+                    <label style="color:var(--primary);">DIST. CIBLE (m)</label>
+                    <input type="number" id="dist-input" class="alt-input" placeholder="Ex: 156" step="1" oninput="majArtillerie()">
+                </div>
+                <div class="alt-box">
+                    <label>AZIMUT</label>
+                    <div style="margin-top: 4px; font-size: 0.75rem;"><b id="hud-azimut">--</b></div>
+                </div>
+            </div>
+            
             <div style="border-top: 1px solid #333; margin: 6px 0;"></div>
             <p style="color: var(--primary)">ÉLÉV (HAUTE) : <b id="hud-elev-haut">--</b> | VOL: <b id="hud-temps-haut">--</b></p>
             <p style="color: var(--blue)">ÉLÉV (TENDUE) : <b id="hud-elev-bas">--</b> | VOL: <b id="hud-temps-bas">--</b></p>
@@ -182,7 +193,6 @@
     L.imageOverlay('altis.webp', bounds).addTo(map);
     map.fitBounds(bounds);
 
-    // --- CONFIGURATION ARTILLERIE ---
     const ECHELLE_PXM = 0.0707; 
     let artillerieCible = { p1: null, p2: null }; 
 
@@ -209,7 +219,14 @@
         majArtillerie();
     }
 
-    // --- MOTEUR PHYSIQUE SIMULATEUR RHS (MÉTHODE D'EULER + DICHOTOMIE) ---
+    // Fonction pour ouvrir le HUD sans cliquer sur la carte
+    function ouvrirHudManuel() {
+        document.getElementById('artillery-hud').style.display = 'block';
+        document.getElementById('hud-azimut').innerText = "--";
+        updateStatus("CALCULATEUR MANUEL ACTIF");
+        majArtillerie();
+    }
+
     function calculerTirRHS(distCible, v0, altShooter, altTarget) {
         distCible = parseFloat(distCible);
         altShooter = parseFloat(altShooter) || 0;
@@ -228,7 +245,6 @@
 
             while (y >= Math.min(altShooter, altTarget) - 200 && t < 200) {
                 let v = Math.sqrt(vx*vx + vy*vy);
-                
                 let ax = airFriction * v * vx;
                 let ay = airFriction * v * vy - 9.81;
 
@@ -250,43 +266,26 @@
             return null; 
         }
 
-        let minHaut = 45;
-        let maxHaut = 89.9;
-        let angleHaut = null;
-        let tempsHaut = null;
-        
+        let minHaut = 45; let maxHaut = 89.9; let angleHaut = null; let tempsHaut = null;
         for (let i = 0; i < 30; i++) {
             let testAngle = (minHaut + maxHaut) / 2;
             let sim = simulerVol(testAngle);
             if (!sim) { maxHaut = testAngle; continue; }
-            
-            if (sim.distance > distCible) minHaut = testAngle; 
-            else maxHaut = testAngle; 
-            
-            angleHaut = testAngle;
-            tempsHaut = sim.temps;
+            if (sim.distance > distCible) minHaut = testAngle; else maxHaut = testAngle; 
+            angleHaut = testAngle; tempsHaut = sim.temps;
         }
 
-        let minBas = 0.1;
-        let maxBas = 45;
-        let angleBas = null;
-        let tempsBas = null;
-
+        let minBas = 0.1; let maxBas = 45; let angleBas = null; let tempsBas = null;
         for (let i = 0; i < 30; i++) {
             let testAngle = (minBas + maxBas) / 2;
             let sim = simulerVol(testAngle);
             if (!sim) { minBas = testAngle; continue; }
-            
-            if (sim.distance > distCible) maxBas = testAngle; 
-            else minBas = testAngle; 
-            
-            angleBas = testAngle;
-            tempsBas = sim.temps;
+            if (sim.distance > distCible) maxBas = testAngle; else minBas = testAngle; 
+            angleBas = testAngle; tempsBas = sim.temps;
         }
 
         let verifHaut = simulerVol(angleHaut);
         if (!verifHaut || Math.abs(verifHaut.distance - distCible) > 5) angleHaut = null;
-
         let verifBas = simulerVol(angleBas);
         if (!verifBas || Math.abs(verifBas.distance - distCible) > 5) angleBas = null;
 
@@ -298,23 +297,20 @@
         };
     }
 
+    // Logique de mise à jour séparée de la carte
     function majArtillerie() {
-        if (!artillerieCible.p1 || !artillerieCible.p2) return;
+        // On récupère la distance depuis l'input (qu'elle vienne de la carte ou d'une saisie clavier)
+        let distMeters = parseFloat(document.getElementById('dist-input').value);
         
-        const p1 = artillerieCible.p1;
-        const p2 = artillerieCible.p2;
-        
-        const distPixels = Math.sqrt(Math.pow(p2[1]-p1[1], 2) + Math.pow(p2[0]-p1[0], 2));
-        const distMeters = (distPixels / ECHELLE_PXM).toFixed(0);
-        
-        let dx = p2[1] - p1[1];
-        let dy = p2[0] - p1[0];
-        let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-        let azimut = (90 - angle + 360) % 360; 
+        if (!distMeters || isNaN(distMeters)) {
+            document.getElementById('hud-elev-haut').innerText = "--";
+            document.getElementById('hud-temps-haut').innerText = "--";
+            document.getElementById('hud-elev-bas').innerText = "--";
+            document.getElementById('hud-temps-bas').innerText = "--";
+            return;
+        }
 
-        // ON RÉCUPÈRE DIRECTEMENT LA VITESSE DEPUIS L'INPUT DÉVERROUILLÉ
         const v0 = parseFloat(document.getElementById('v0-input').value);
-        
         let valM = document.getElementById('alt-mortier').value;
         let valC = document.getElementById('alt-cible').value;
         
@@ -326,15 +322,12 @@
         
         const tir = calculerTirRHS(distMeters, v0, altMortier, altCible);
         
-        document.getElementById('hud-dist').innerText = `${distMeters}m`;
-        document.getElementById('hud-azimut').innerText = `${azimut.toFixed(1)}°`;
-        
         if (tir) {
             document.getElementById('hud-elev-haut').innerText = tir.haut;
             document.getElementById('hud-temps-haut').innerText = tir.tempsHaut;
             document.getElementById('hud-elev-bas').innerText = tir.bas;
             document.getElementById('hud-temps-bas').innerText = tir.tempsBas;
-            updateStatus("CIBLE VERROUILLÉE");
+            updateStatus("CALCUL TERMINÉ");
         } else {
             document.getElementById('hud-elev-haut').innerText = "HORS PORTÉE";
             document.getElementById('hud-temps-haut').innerText = "--";
@@ -445,7 +438,7 @@
                 
                 updateStatus("CLIQUEZ SUR LA CIBLE...");
                 document.getElementById('artillery-hud').style.display = 'block';
-                document.getElementById('hud-dist').innerText = "CALCUL EN COURS...";
+                document.getElementById('dist-input').value = ""; // Vider l'input en attendant
                 document.getElementById('hud-azimut').innerText = "--";
                 document.getElementById('hud-elev-haut').innerText = "--";
                 document.getElementById('hud-temps-haut').innerText = "--";
@@ -457,11 +450,24 @@
                 artillerieCible.p1 = pointsBuffer[0]; 
                 artillerieCible.p2 = pointsBuffer[1]; 
                 
+                // Calcul direct via la carte
+                const p1 = artillerieCible.p1;
+                const p2 = artillerieCible.p2;
+                const distPixels = Math.sqrt(Math.pow(p2[1]-p1[1], 2) + Math.pow(p2[0]-p1[0], 2));
+                const distMeters = (distPixels / ECHELLE_PXM).toFixed(0);
+                
+                let dx = p2[1] - p1[1];
+                let dy = p2[0] - p1[0];
+                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                let azimut = (90 - angle + 360) % 360; 
+                
+                // Remplir les champs avec les données de la carte
+                document.getElementById('dist-input').value = distMeters;
+                document.getElementById('hud-azimut').innerText = `${azimut.toFixed(1)}°`;
+                
                 majArtillerie(); 
 
-                const distMeters = document.getElementById('hud-dist').innerText;
-                const azimut = document.getElementById('hud-azimut').innerText;
-                const tooltipText = `DIST: ${distMeters} | AZ: ${azimut}`;
+                const tooltipText = `DIST: ${distMeters}m | AZ: ${azimut.toFixed(1)}°`;
                 
                 save({ 
                     x: artillerieCible.p1[0], y: artillerieCible.p1[1],
