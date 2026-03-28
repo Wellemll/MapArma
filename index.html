@@ -60,6 +60,7 @@
         .alt-container { display: flex; gap: 5px; margin-top: 5px; }
         .alt-box { flex: 1; text-align: center; }
 
+        /* Tooltip Artillerie */
         .tooltip-artillery { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--orange) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--orange); }
     </style>
 </head>
@@ -134,11 +135,13 @@
         <div class="hud-header">RAPPORT BALISTIQUE</div>
         
         <div class="hud-data">
-            <label style="color:var(--orange); font-weight:bold;">SÉLECTION CHARGE (82mm):</label>
+            <label style="color:var(--orange); font-weight:bold;">SÉLECTION CHARGE (81mm M252):</label>
             <select id="charge-select" onchange="majArtillerie()">
-                <option value="70">CHARGE 0 (~70 m/s)</option>
-                <option value="140">CHARGE 1 (~140 m/s)</option>
-                <option value="200" selected>CHARGE 2 (~200 m/s)</option>
+                <option value="66">CHARGE 0 (66 m/s | Max ~425m)</option>
+                <option value="149">CHARGE 1 (149 m/s | Max ~1.9km)</option>
+                <option value="208" selected>CHARGE 2 (208 m/s | Max ~3.3km)</option>
+                <option value="259">CHARGE 3 (259 m/s | Max ~4.6km)</option>
+                <option value="305">CHARGE 4 (305 m/s | Max ~5.9km)</option>
             </select>
             
             <div class="alt-container">
@@ -194,9 +197,8 @@
         'Dot': { isVector: true }
     };
 
-    // --- CORRECTION DU CALCUL BALISTIQUE ---
+    // --- CALCUL BALISTIQUE (RÉPARÉ ET SANS LIMITE D'ANGLE) ---
     function calculerTir3D(distM, v0, g, altShooter, altTarget) {
-        // IMPORTANT : S'assurer que 'distM' est manipulé comme un nombre (et non du texte) pour éviter les bugs de concaténation JavaScript
         const x = parseFloat(distM); 
         if (x === 0 || isNaN(x)) return null;
 
@@ -205,10 +207,10 @@
         const A = (g * x * x) / (2 * v0 * v0);
         const discriminant = (x * x) - (4 * A * (A + y));
 
-        // Si le discriminant est négatif, la cible est purement hors de portée physique de l'obus
+        // Si la cible est physiquement inatteignable avec cette charge
         if (discriminant < 0) return null; 
 
-        // Calcul des angles en radians
+        // Angles en radians
         const u1 = (x + Math.sqrt(discriminant)) / (2 * A); 
         const u2 = (x - Math.sqrt(discriminant)) / (2 * A); 
 
@@ -223,7 +225,7 @@
         const t1 = x / (v0 * Math.cos(rad1));
         const t2 = x / (v0 * Math.cos(rad2));
 
-        // TOUTES RESTRICTIONS D'ANGLES SONT DÉSACTIVÉES
+        // TOUTES LES RESTRICTIONS D'ANGLE SONT LEVÉES
         return { 
             bas: `${deg1.toFixed(1)}°`, 
             haut: `${deg2.toFixed(1)}°`,
@@ -273,7 +275,7 @@
             document.getElementById('hud-temps-haut').innerText = "--";
             document.getElementById('hud-elev-bas').innerText = "HORS PORTÉE";
             document.getElementById('hud-temps-bas').innerText = "--";
-            updateStatus("CIBLE HORS PORTÉE (TROP LOIN)");
+            updateStatus("CIBLE HORS PORTÉE (TROP LOIN/HAUT)");
         }
     }
 
