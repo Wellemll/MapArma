@@ -64,8 +64,8 @@
         .alt-container { display: flex; gap: 5px; margin-top: 5px; }
         .alt-box { flex: 1; text-align: center; }
 
-        .tooltip-artillery { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--orange) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--orange); }
-        .tooltip-route { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--blue) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--blue); }
+        .tooltip-artillery { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--orange) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--orange); line-height: 1.4; text-align: center; }
+        .tooltip-route { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--blue) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--blue); line-height: 1.4; text-align: center; }
     </style>
 </head>
 <body>
@@ -392,7 +392,7 @@
         const etaTxt = document.getElementById('route-eta').innerText;
         const transportInfo = document.getElementById('transport-select').options[document.getElementById('transport-select').selectedIndex].text;
         const transportName = transportInfo.split('(')[0].trim();
-        const tooltipText = `ROUTE (${transportName}) | DIST: ${distTxt} | ETA: ${etaTxt}`;
+        const tooltipText = `ROUTE (${transportName})<br>DIST: ${distTxt} — ETA: ${etaTxt}`;
         
         save({ 
             x: routePoints[0][0], y: routePoints[0][1],
@@ -472,12 +472,10 @@
                         let line = L.polyline(pts, {color: color, weight: 3, dashArray: '5, 10', bubblingMouseEvents: true});
                         
                         if (!isRoute) {
-                            // C'est un tir d'artillerie : on ajoute la Kill Zone de 35m au point d'impact (pts[1])
                             let killRadiusPx = 35 * ECHELLE_PXM;
                             let circle = L.circle(pts[1], {radius: killRadiusPx, color: '#ff3e3e', fillColor: '#ff3e3e', fillOpacity: 0.3, weight: 1, bubblingMouseEvents: true});
                             layer = L.featureGroup([line, circle]);
                         } else {
-                            // C'est un itinéraire, on garde juste la ligne
                             layer = L.featureGroup([line]);
                         }
                         
@@ -500,9 +498,44 @@
                 }
                 
                 if (layer) { 
+                    // LOGIQUE DE RECHARGEMENT DES DONNÉES AU CLIC
                     layer.on('click', (e) => { 
                         if (interMode === 'ADD' && (currentType === 'mesure' || currentType === 'route')) {
                             map.fire('click', e);
+                        } else if (interMode === 'EDIT' && p.points_json && p.type === 'mesure_line') {
+                            L.DomEvent.stopPropagation(e);
+                            const pts = JSON.parse(p.points_json);
+                            const isRoute = parts[2] && parts[2].includes("ROUTE");
+                            
+                            if (!isRoute) {
+                                // Recharger un tir d'artillerie
+                                artillerieCible.p1 = pts[0];
+                                artillerieCible.p2 = pts[1];
+                                const distPx = Math.sqrt(Math.pow(pts[1][1]-pts[0][1], 2) + Math.pow(pts[1][0]-pts[0][0], 2));
+                                const dM = (distPx / ECHELLE_PXM).toFixed(0);
+                                let dx = pts[1][1] - pts[0][1];
+                                let dy = pts[1][0] - pts[0][0];
+                                let az = (90 - (Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360;
+                                
+                                document.getElementById('artillery-hud').style.display = 'block';
+                                document.getElementById('dist-input').value = dM;
+                                document.getElementById('hud-azimut').innerText = `${az.toFixed(2)}°`;
+                                majArtillerie();
+                                updateStatus("DONNÉES DE TIR RECHARGÉES");
+                            } else {
+                                // Recharger un itinéraire
+                                document.getElementById('route-hud').style.display = 'block';
+                                routePoints = pts;
+                                currentRouteDist = 0;
+                                for(let i=1; i<pts.length; i++) {
+                                    const prev = pts[i-1];
+                                    const pos = pts[i];
+                                    const dp = Math.sqrt(Math.pow(pos[1]-prev[1], 2) + Math.pow(pos[0]-prev[0], 2));
+                                    currentRouteDist += (dp / ECHELLE_PXM);
+                                }
+                                majRoute();
+                                updateStatus("ITINÉRAIRE RECHARGÉ");
+                            }
                         } else if (interMode !== 'ADD') { 
                             L.DomEvent.stopPropagation(e); 
                             if (interMode === 'DEL') del(p.id); 
@@ -587,7 +620,10 @@
                 
                 majArtillerie(); 
 
-                const tooltipText = `DIST: ${distMeters}m | AZ: ${azimut.toFixed(2)}°`;
+                // SAUVEGARDE DE L'ÉLÉVATION DANS LA BULLE D'INFO
+                const elevTxt = document.getElementById('hud-elev-haut').innerText;
+                const volTxt = document.getElementById('hud-temps-haut').innerText;
+                const tooltipText = `DIST: ${distMeters}m — AZ: ${azimut.toFixed(2)}°<br>ÉLÉV: <span style="color:var(--primary)">${elevTxt}</span> — VOL: ${volTxt}`;
                 
                 save({ 
                     x: artillerieCible.p1[0], y: artillerieCible.p1[1],
