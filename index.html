@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL | HD NATO STD (RHS CALIBRATED)</title>
+    <title>ALTIS COMMAND TERMINAL | RHS UNLOCKED</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -45,7 +45,7 @@
         .dir-arrow { position: absolute; font-size: 18px; font-weight: bold; z-index: 1; }
 
         /* HUD ARTILLERIE */
-        #artillery-hud { position: absolute; top: 15px; right: 15px; width: 320px; background: rgba(13, 17, 23, 0.95); border: 1px solid var(--orange); border-radius: 4px; padding: 10px; font-family: 'JetBrains Mono', monospace; color: white; z-index: 1002; display: none; box-shadow: 0 0 15px rgba(255, 157, 0, 0.2); }
+        #artillery-hud { position: absolute; top: 15px; right: 15px; width: 330px; background: rgba(13, 17, 23, 0.95); border: 1px solid var(--orange); border-radius: 4px; padding: 10px; font-family: 'JetBrains Mono', monospace; color: white; z-index: 1002; display: none; box-shadow: 0 0 15px rgba(255, 157, 0, 0.2); }
         #artillery-hud .hud-header { font-family: 'Orbitron', sans-serif; color: var(--orange); text-align: center; font-size: 0.8rem; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
         #artillery-hud .hud-data { font-size: 0.65rem; line-height: 1.5; color: #8892b0; }
         #artillery-hud .hud-data b { color: white; font-size: 0.7rem; }
@@ -129,18 +129,29 @@
 
     <div id="artillery-hud">
         <button class="close-hud" onclick="fermerHud()">X</button>
-        <div class="hud-header">RAPPORT BALISTIQUE RHS</div>
+        <div class="hud-header">RAPPORT BALISTIQUE (DÉVERROUILLÉ)</div>
         
         <div class="hud-data">
-            <label style="color:var(--orange); font-weight:bold;">SÉLECTION CHARGE (81mm M252):</label>
-            <select id="charge-select" onchange="majArtillerie()">
-                <option value="66">CHARGE 0 (66 m/s | Max ~425m)</option>
-                <option value="149">CHARGE 1 (149 m/s | Max ~1.9km)</option>
-                <option value="208" selected>CHARGE 2 (208 m/s | Max ~3.3km)</option>
-                <option value="259">CHARGE 3 (259 m/s | Max ~4.6km)</option>
-                <option value="305">CHARGE 4 (305 m/s | Max ~5.9km)</option>
+            <label style="color:var(--orange); font-weight:bold;">SÉLECTION CHARGE (Base de départ):</label>
+            <select id="charge-select" onchange="updateV0()">
+                <option value="66">CHARGE 0 (IRL: 66 m/s)</option>
+                <option value="149" selected>CHARGE 1 (IRL: 149 m/s)</option>
+                <option value="208">CHARGE 2 (IRL: 208 m/s)</option>
+                <option value="259">CHARGE 3 (IRL: 259 m/s)</option>
+                <option value="305">CHARGE 4 (IRL: 305 m/s)</option>
             </select>
             
+            <div class="alt-container" style="background: rgba(255, 157, 0, 0.1); padding: 5px; border-radius: 4px; border: 1px dashed var(--orange); margin-bottom: 5px;">
+                <div class="alt-box">
+                    <label style="color:var(--blue);">VITESSE (m/s)</label>
+                    <input type="number" id="v0-input" class="alt-input" value="149" step="1" oninput="majArtillerie()">
+                </div>
+                <div class="alt-box">
+                    <label style="color:var(--red);">COEFF. AIR</label>
+                    <input type="number" id="air-friction" class="alt-input" value="-0.00057" step="0.00001" oninput="majArtillerie()">
+                </div>
+            </div>
+
             <div class="alt-container">
                 <div class="alt-box">
                     <label>ALT. TIREUR</label>
@@ -150,11 +161,6 @@
                     <label>ALT. CIBLE</label>
                     <input type="number" id="alt-cible" class="alt-input" placeholder="Auto" step="1" oninput="majArtillerie()">
                 </div>
-            </div>
-
-            <div class="alt-box" style="margin-top: 5px;">
-                <label style="color:var(--red);">COEFF. AIR (RHS)</label>
-                <input type="number" id="air-friction" class="alt-input" style="color:var(--red); border-color:var(--red);" value="-0.00057" step="0.00001" oninput="majArtillerie()">
             </div>
             
             <div style="border-top: 1px solid #333; margin: 8px 0;"></div>
@@ -198,6 +204,12 @@
         'Dot': { isVector: true }
     };
 
+    function updateV0() {
+        // Met à jour la case Vitesse Initiale quand on change le menu déroulant
+        document.getElementById('v0-input').value = document.getElementById('charge-select').value;
+        majArtillerie();
+    }
+
     // --- MOTEUR PHYSIQUE SIMULATEUR RHS (MÉTHODE D'EULER + DICHOTOMIE) ---
     function calculerTirRHS(distCible, v0, altShooter, altTarget) {
         distCible = parseFloat(distCible);
@@ -207,20 +219,17 @@
 
         if (distCible === 0 || isNaN(distCible)) return null;
 
-        // Fonction qui simule physiquement le vol de l'obus pas par pas
         function simulerVol(angleDeg) {
-            const dt = 0.02; // Pas de calcul : 20ms pour très haute précision
+            const dt = 0.02; 
             let x = 0;
             let y = altShooter;
             let vx = v0 * Math.cos(angleDeg * Math.PI / 180);
             let vy = v0 * Math.sin(angleDeg * Math.PI / 180);
             let t = 0;
 
-            // Limite de sécurité (si l'obus tombe très bas ou vole pendant plus de 200 secondes)
             while (y >= Math.min(altShooter, altTarget) - 200 && t < 200) {
                 let v = Math.sqrt(vx*vx + vy*vy);
                 
-                // Mécanique de friction de l'air d'Arma 3 : accélération = friction * vitesse * vitesse
                 let ax = airFriction * v * vx;
                 let ay = airFriction * v * vy - 9.81;
 
@@ -231,9 +240,7 @@
                 y += vy * dt;
                 t += dt;
 
-                // L'obus passe sous l'altitude cible en redescendant (impact)
                 if (vy < 0 && y <= altTarget) {
-                    // Interpolation linéaire pour trouver la distance d'impact exacte
                     let y_prev = y - vy * dt;
                     let x_prev = x - vx * dt;
                     let ratio = (altTarget - y) / (y_prev - y);
@@ -241,10 +248,9 @@
                     return { distance: final_x, temps: t };
                 }
             }
-            return null; // L'obus n'a jamais touché la cible
+            return null; 
         }
 
-        // BRUTE-FORCE : CHERCHE L'ARC HAUT (Entre 45° et 89.9°)
         let minHaut = 45;
         let maxHaut = 89.9;
         let angleHaut = null;
@@ -255,14 +261,13 @@
             let sim = simulerVol(testAngle);
             if (!sim) { maxHaut = testAngle; continue; }
             
-            if (sim.distance > distCible) minHaut = testAngle; // Tire trop loin, il faut lever le canon
-            else maxHaut = testAngle; // Tire trop court, il faut baisser le canon
+            if (sim.distance > distCible) minHaut = testAngle; 
+            else maxHaut = testAngle; 
             
             angleHaut = testAngle;
             tempsHaut = sim.temps;
         }
 
-        // BRUTE-FORCE : CHERCHE L'ARC BAS (Entre 0.1° et 45°)
         let minBas = 0.1;
         let maxBas = 45;
         let angleBas = null;
@@ -273,14 +278,13 @@
             let sim = simulerVol(testAngle);
             if (!sim) { minBas = testAngle; continue; }
             
-            if (sim.distance > distCible) maxBas = testAngle; // Tire trop loin, il faut baisser le canon
-            else minBas = testAngle; // Tire trop court, il faut lever le canon
+            if (sim.distance > distCible) maxBas = testAngle; 
+            else minBas = testAngle; 
             
             angleBas = testAngle;
             tempsBas = sim.temps;
         }
 
-        // Vérification de sécurité finale (Si la distance trouvée est à plus de 5 mètres de la cible = Inatteignable)
         let verifHaut = simulerVol(angleHaut);
         if (!verifHaut || Math.abs(verifHaut.distance - distCible) > 5) angleHaut = null;
 
@@ -309,7 +313,8 @@
         let angle = Math.atan2(dy, dx) * (180 / Math.PI);
         let azimut = (90 - angle + 360) % 360; 
 
-        const v0 = parseFloat(document.getElementById('charge-select').value);
+        // ON RÉCUPÈRE DIRECTEMENT LA VITESSE DEPUIS L'INPUT DÉVERROUILLÉ
+        const v0 = parseFloat(document.getElementById('v0-input').value);
         
         let valM = document.getElementById('alt-mortier').value;
         let valC = document.getElementById('alt-cible').value;
@@ -320,7 +325,6 @@
         if (valM === "" && valC !== "") altMortier = altCible;
         if (valC === "" && valM !== "") altCible = altMortier;
         
-        // APPEL AU NOUVEAU SIMULATEUR PHYSIQUE
         const tir = calculerTirRHS(distMeters, v0, altMortier, altCible);
         
         document.getElementById('hud-dist').innerText = `${distMeters}m`;
