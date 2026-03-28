@@ -51,14 +51,21 @@
         #artillery-hud .hud-data b { color: white; font-size: 0.7rem; }
         #artillery-hud .close-hud { position: absolute; top: 5px; right: 5px; background: none; border: none; color: var(--red); cursor: pointer; font-weight: bold; }
         
-        #charge-select, .alt-input { background: rgba(0,0,0,0.5); color: var(--orange); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; box-sizing: border-box; outline: none; border-radius: 3px; margin-bottom: 4px;}
-        #charge-select option { background: #111; color: white; }
+        /* HUD PLANIFICATEUR ROUTE */
+        #route-hud { position: absolute; top: 15px; left: 310px; width: 250px; background: rgba(13, 17, 23, 0.95); border: 1px solid var(--blue); border-radius: 4px; padding: 10px; font-family: 'JetBrains Mono', monospace; color: white; z-index: 1002; display: none; box-shadow: 0 0 15px rgba(0, 210, 255, 0.2); }
+        #route-hud .hud-header { font-family: 'Orbitron', sans-serif; color: var(--blue); text-align: center; font-size: 0.8rem; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        
+        #charge-select, .alt-input, #transport-select { background: rgba(0,0,0,0.5); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; box-sizing: border-box; outline: none; border-radius: 3px; margin-bottom: 4px;}
+        #charge-select, .alt-input { color: var(--orange); }
+        #transport-select { color: var(--blue); border-color: var(--blue); margin: 4px 0; }
+        #charge-select option, #transport-select option { background: #111; color: white; }
         .alt-input { margin-top: 2px; color: white; }
         .alt-input::placeholder { color: #555; }
         .alt-container { display: flex; gap: 5px; margin-top: 5px; }
         .alt-box { flex: 1; text-align: center; }
 
         .tooltip-artillery { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--orange) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--orange); }
+        .tooltip-route { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--blue) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--blue); }
     </style>
 </head>
 <body>
@@ -112,6 +119,7 @@
         <div class="section-label">OUTILS SPÉCIAUX</div>
         <button class="btn-util" onclick="ouvrirHudManuel()">🧮 CALCUL MANUEL (SANS CARTE)</button>
         <button class="btn-util" style="color:var(--orange); border-color:var(--orange);" onclick="setType('mesure', this)">📏 RÈGLE ARTILLERIE</button>
+        <button class="btn-util" style="color:var(--blue); border-color:var(--blue);" onclick="setType('route', this)">🛣️ TRACER ITINÉRAIRE</button>
         <button class="btn-util" onclick="setType('arrow', this)">➔ FLÈCHE (2 CLICS)</button>
         <button class="btn-util" onclick="setType('zone', this)">⬢ ZONE (3 CLICS)</button>
         <button class="btn-util" onclick="setType('zone4', this)">⬢ ZONE (4 CLICS)</button>
@@ -183,6 +191,23 @@
         </div>
     </div>
 
+    <div id="route-hud">
+        <button class="close-hud" onclick="fermerRouteHud()" style="position: absolute; top: 5px; right: 5px; background: none; border: none; color: var(--red); cursor: pointer; font-weight: bold;">X</button>
+        <div class="hud-header">PLANIFICATEUR ITINÉRAIRE</div>
+        <div style="font-size: 0.7rem; color: #8892b0;">
+            <p>DISTANCE TOTALE : <b id="route-dist" style="color: white;">0m</b></p>
+            <label style="color:var(--blue); font-weight:bold;">TRANSPORT :</label>
+            <select id="transport-select" onchange="majRoute()">
+                <option value="5">INFANTERIE (5 km/h)</option>
+                <option value="40">BLINDÉ LOURD (40 km/h)</option>
+                <option value="60" selected>VHC LÉGER (60 km/h)</option>
+                <option value="200">HÉLICOPTÈRE (200 km/h)</option>
+            </select>
+            <p style="color: var(--primary); margin-top: 8px;">ETA : <b id="route-eta" style="color: white;">--</b></p>
+            <button onclick="validerRoute()" style="width: 100%; padding: 5px; margin-top: 5px; background: var(--blue); color: black; border: none; font-weight: bold; cursor: pointer; border-radius: 3px;">SAUVEGARDER</button>
+        </div>
+    </div>
+
     <div class="status-bar" id="status">LIAISON ÉTABLIE</div>
 </div>
 
@@ -200,6 +225,11 @@
     let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0, isMuted = false;
     let drawingPolyline; 
     let pendingIconPos = null;
+    
+    // Variables pour l'itinéraire
+    let routePoints = [];
+    let routePolyline = null;
+    let currentRouteDist = 0;
 
     const iconFiles = {
         'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
@@ -334,6 +364,57 @@
         }
     }
 
+    // FONCTIONS POUR L'ITINÉRAIRE
+    function majRoute() {
+        document.getElementById('route-dist').innerText = `${currentRouteDist.toFixed(0)}m`;
+        const speedKmh = parseFloat(document.getElementById('transport-select').value);
+        const speedMs = speedKmh / 3.6;
+        
+        if (currentRouteDist === 0) {
+            document.getElementById('route-eta').innerText = "0s";
+            return;
+        }
+        
+        const timeSec = currentRouteDist / speedMs;
+        let etaTxt = "";
+        if (timeSec < 60) {
+            etaTxt = `${Math.round(timeSec)}s`;
+        } else {
+            const mins = Math.floor(timeSec / 60);
+            const secs = Math.round(timeSec % 60);
+            etaTxt = `${mins}m ${secs}s`;
+        }
+        document.getElementById('route-eta').innerText = etaTxt;
+    }
+
+    function validerRoute() {
+        if (routePoints.length < 2) return fermerRouteHud();
+        
+        const distTxt = document.getElementById('route-dist').innerText;
+        const etaTxt = document.getElementById('route-eta').innerText;
+        const transportInfo = document.getElementById('transport-select').options[document.getElementById('transport-select').selectedIndex].text;
+        const transportName = transportInfo.split('(')[0].trim();
+        const tooltipText = `ROUTE (${transportName}) | DIST: ${distTxt} | ETA: ${etaTxt}`;
+        
+        save({ 
+            x: routePoints[0][0], y: routePoints[0][1],
+            type: 'mesure_line', 
+            points_json: JSON.stringify(routePoints), 
+            label: `${currentColor}|${currentSize}|${tooltipText}` 
+        });
+        
+        fermerRouteHud();
+    }
+
+    function fermerRouteHud() {
+        document.getElementById('route-hud').style.display = 'none';
+        routePoints = [];
+        currentRouteDist = 0;
+        if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
+        if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+        if(currentType === 'route') updateStatus("LIAISON ÉTABLIE");
+    }
+
     function fermerHud() {
         document.getElementById('artillery-hud').style.display = 'none';
         artillerieCible = { p1: null, p2: null };
@@ -349,10 +430,21 @@
     function jumpTo(pos) { map.flyTo(pos, 1, { animate: true, duration: 1.2 }); updateStatus(`DÉPLOIEMENT : ZONE ${pos}`); }
     map.on('contextmenu', (e) => { alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]"); });
 
-    function setInterMode(m) { fermerHud(); interMode = m; ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active'); load(); }
-    function setType(t, b) { fermerHud(); currentType = t; document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); pointsBuffer = []; pendingIconPos = null; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } if(interMode !== 'ADD' && interMode !== 'EDIT') setInterMode('ADD'); updateStatus(`OUTIL : ${t.toUpperCase()}`); }
+    function setInterMode(m) { fermerHud(); fermerRouteHud(); interMode = m; ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active'); load(); }
+    function setType(t, b) { 
+        fermerHud(); 
+        fermerRouteHud(); 
+        currentType = t; 
+        document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active')); 
+        b.classList.add('active'); 
+        pointsBuffer = []; 
+        pendingIconPos = null; 
+        if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } 
+        if(interMode !== 'ADD' && interMode !== 'EDIT') setInterMode('ADD'); 
+        updateStatus(`OUTIL : ${t.toUpperCase()}`); 
+    }
     function updateSizePreview(val) { currentSize = val; document.getElementById('sizeVal').innerText = val + "px"; }
-    function setColor(c, el) { currentColor = c; document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active')); el.classList.add('active'); if(drawingPolyline) drawingPolyline.setStyle({color: c}); }
+    function setColor(c, el) { currentColor = c; document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active')); el.classList.add('active'); if(drawingPolyline) drawingPolyline.setStyle({color: c}); if(routePolyline) routePolyline.setStyle({color: c}); }
 
     async function load() {
         if (isSaving) return;
@@ -380,7 +472,9 @@
                     if (p.type === 'mesure_line') {
                         layer = L.polyline(pts, {color: color, weight: 3, dashArray: '5, 10', bubblingMouseEvents: true});
                         if (parts[2]) {
-                            layer.bindTooltip(parts[2], {className: 'tooltip-artillery', sticky: true, direction: 'center'});
+                            // On ajoute la classe "tooltip-route" si le texte contient "ROUTE" pour la couleur bleue, sinon orange
+                            const tipClass = parts[2].includes("ROUTE") ? 'tooltip-route' : 'tooltip-artillery';
+                            layer.bindTooltip(parts[2], {className: tipClass, sticky: true, direction: 'center'});
                         }
                     } else if (p.type.startsWith('zone')) {
                         layer = L.polygon(pts, {color: color, fillOpacity: 0.3, bubblingMouseEvents: true});
@@ -398,7 +492,7 @@
                 
                 if (layer) { 
                     layer.on('click', (e) => { 
-                        if (interMode === 'ADD' && currentType === 'mesure') {
+                        if (interMode === 'ADD' && (currentType === 'mesure' || currentType === 'route')) {
                             map.fire('click', e);
                         } else if (interMode !== 'ADD') { 
                             L.DomEvent.stopPropagation(e); 
@@ -417,6 +511,7 @@
         if (drawingPolyline) {
             let start;
             if (currentType === 'mesure' && pointsBuffer.length > 0) start = pointsBuffer[0];
+            else if (currentType === 'route' && routePoints.length > 0) start = routePoints[routePoints.length - 1];
             else if (pendingIconPos) start = pendingIconPos;
             else if (pointsBuffer.length > 0) start = pointsBuffer[pointsBuffer.length - 1];
             
@@ -427,6 +522,28 @@
     map.on('click', e => {
         if (interMode !== 'ADD') return;
         const pos = [e.latlng.lat, e.latlng.lng];
+
+        // LOGIQUE POUR LA ROUTE / ITINÉRAIRE
+        if (currentType === 'route') {
+            routePoints.push(pos);
+            
+            if (routePoints.length === 1) {
+                document.getElementById('route-hud').style.display = 'block';
+                currentRouteDist = 0;
+                majRoute();
+                updateStatus("TRACÉ EN COURS... CLIQUEZ POUR AJOUTER DES POINTS");
+                routePolyline = L.polyline([pos], {color: currentColor, weight: 3, dashArray: '5, 5'}).addTo(map);
+                drawingPolyline = L.polyline([pos, pos], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map);
+            } else {
+                const prev = routePoints[routePoints.length - 2];
+                const distPx = Math.sqrt(Math.pow(pos[1]-prev[1], 2) + Math.pow(pos[0]-prev[0], 2));
+                currentRouteDist += (distPx / ECHELLE_PXM);
+                
+                routePolyline.setLatLngs(routePoints);
+                majRoute();
+            }
+            return;
+        }
 
         if (currentType === 'mesure') {
             pointsBuffer.push(pos);
@@ -457,7 +574,6 @@
                 let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 let azimut = (90 - angle + 360) % 360; 
                 
-                // AZIMUT AVEC 2 DÉCIMALES ICI
                 document.getElementById('dist-input').value = distMeters;
                 document.getElementById('hud-azimut').innerText = `${azimut.toFixed(2)}°`;
                 
