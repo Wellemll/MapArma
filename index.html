@@ -220,10 +220,12 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/jquery@3.5.1/dist/jquery.min.js"></script>
 <script src="https://jetelain.github.io/Arma3Map/js/mapUtils.js"></script>
-<script src="https://jetelain.github.io/Arma3Map/maps/altis.js"></script> <script>
+<script src="https://jetelain.github.io/Arma3Map/maps/altis.js"></script>
+
+<script>
     // Variables globales
     var map;
-    const ECHELLE_PXM = 1.0; // Echelle 1:1 certifiée Arma3Map
+    const ECHELLE_PXM = 1.0; 
     let artillerieCible = { p1: null, p2: null }; 
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
     let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0, isMuted = false;
@@ -233,40 +235,52 @@
     let routePolyline = null;
     let currentRouteDist = 0;
 
+    // LE DICTIONNAIRE DES ICÔNES (L'élément manquant essentiel !)
+    const iconFiles = {
+        'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
+        'Vehicule': { blue: 'Icons/Vehicule.png', red: 'Icons/Vehicule2.png' },
+        'HeavyArmor': { blue: 'Icons/HeavyArmor.png', red: 'Icons/HeavyArmor2.png' },
+        'Armourwheeled': { blue: 'Icons/Armourwheeled.png', red: 'Icons/Armourwheeled2.png' },
+        'Artillery': { blue: 'Icons/Artillery.png', red: 'Icons/Artillery2.png' },
+        'Airdefense': { blue: 'Icons/Airdefense.png', red: 'Icons/Airdefense2.png' },
+        'Attackhelicopter': { blue: 'Icons/Attackhelicopter.png', red: 'Icons/Attackhelicopter2.png' },
+        'Mine': { blue: 'Icons/Mine.png', red: 'Icons/Mine2.png' },
+        'Dead': { any: 'Icons/Dead.png' },
+        'Dot': { isVector: true }
+    };
+
     // === INITIALISATION SÉCURISÉE AVEC JQUERY ===
     $(function () {
         var mapInfos = Arma3Map.Maps.altis; 
 
-        // --- NOUVEAU: ACTIVATION DU SUR-ZOOM ---
-        var overZoomLevel = mapInfos.maxZoom + 2; // On rajoute 2 crans de zoom virtuel
+        var overZoomLevel = mapInfos.maxZoom + 2; // Zoom virtuel amélioré
 
-        // Création de la carte avec la nouvelle limite
+        // Création de la carte
         map = L.map("map", {
           minZoom: mapInfos.minZoom,
-          maxZoom: overZoomLevel, // Permet à l'utilisateur de scroller plus loin
+          maxZoom: overZoomLevel,
           crs: mapInfos.CRS,
           zoomControl: false
         });
 
-        // Chargement des tuiles HD topographiques
+        // Chargement des tuiles
         L.tileLayer(
           "https://jetelain.github.io/Arma3Map" + mapInfos.tilePattern,
           {
             attribution: mapInfos.attribution,
             tileSize: mapInfos.tileSize,
             noWrap: true,
-            maxNativeZoom: mapInfos.maxZoom, // Bloque la requête internet d'images inexistantes
-            maxZoom: overZoomLevel // Étire numériquement la dernière image HD trouvée
+            maxNativeZoom: mapInfos.maxZoom,
+            maxZoom: overZoomLevel 
           }
         ).addTo(map);
 
-        // Cadrage de départ officiel
         map.setView(mapInfos.center, mapInfos.defaultZoom);
 
         L.latlngGraticule().addTo(map);
         L.control.gridMousePosition().addTo(map);
 
-        // === RÉATTACHEMENT DE VOS OUTILS TACTIQUES À LA CARTE ===
+        // === GESTION DES CLICS ET DESSINS ===
         
         map.on('mousemove', e => { 
             if (drawingPolyline) {
@@ -394,7 +408,6 @@
             } else { save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` }); }
         });
 
-        // Lance le chargement des pings enregistrés
         setInterval(load, 1000);
         load();
     });
