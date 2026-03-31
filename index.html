@@ -409,7 +409,7 @@
     });
 
     // ==========================================
-    // LOGIQUE DE SÉCURITÉ ET RACCOURCIS CLAVIER
+    // LOGIQUE D'ANNULATION ET RACCOURCIS CLAVIER
     // ==========================================
     
     function annulerTrace() {
@@ -425,24 +425,23 @@
     }
 
     document.addEventListener('keydown', function(e) {
-        // Ignorer si on est dans un champ texte (comme la distance manuelle)
+        // Ignorer si l'utilisateur est en train de taper des chiffres ou du texte dans un menu
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
-        // ESCAPE : Annuler tout tracé en cours
+        // TOUCHE ESCAPE : Annuler totalement le tracé
         if (e.key === 'Escape') {
             if (pointsBuffer.length > 0 || routePoints.length > 0 || pendingIconPos) {
                 annulerTrace();
             }
         }
         
-        // TOUCHE Z : Annuler le dernier point (Undo)
+        // TOUCHE Z : Faire un "Undo" (Annuler le dernier point cliqué)
         if (e.key.toLowerCase() === 'z') {
             if (currentType === 'route' && routePoints.length > 0) {
-                routePoints.pop(); // Enlever le dernier point
+                routePoints.pop(); // Retire le dernier clic
                 if (routePoints.length === 0) {
                     annulerTrace();
                 } else {
-                    // Recalculer toute la route avec un point de moins
                     currentRouteDist = 0;
                     for(let i=1; i<routePoints.length; i++) {
                         const prev = routePoints[i-1];
@@ -455,14 +454,21 @@
                     majRoute();
                 }
             } else if (pointsBuffer.length > 0) {
-                pointsBuffer.pop();
+                pointsBuffer.pop(); // Retire le dernier clic
                 if (pointsBuffer.length === 0) {
                     annulerTrace();
                 } else {
-                    if (drawingPolyline) drawingPolyline.setLatLngs([pointsBuffer[pointsBuffer.length - 1], pointsBuffer[pointsBuffer.length - 1]]);
+                    const lastPt = pointsBuffer[pointsBuffer.length - 1];
+                    if (drawingPolyline) drawingPolyline.setLatLngs([lastPt, lastPt]); // Raccroche la ligne visuelle
+                    
+                    if (currentType === 'mesure') {
+                        document.getElementById('dist-input').value = "";
+                        document.getElementById('hud-azimut').innerText = "--";
+                        majArtillerie(); 
+                    }
                 }
             } else if (pendingIconPos) {
-                annulerTrace();
+                annulerTrace(); // Annule la pose de l'icône si on est à l'étape 2 (rotation)
             }
         }
     });
@@ -506,7 +512,13 @@
 
     function majArtillerie() {
         let distMeters = parseFloat(document.getElementById('dist-input').value);
-        if (!distMeters || isNaN(distMeters)) return;
+        if (!distMeters || isNaN(distMeters)) {
+            document.getElementById('hud-elev-haut').innerText = "--";
+            document.getElementById('hud-temps-haut').innerText = "--";
+            document.getElementById('hud-elev-bas').innerText = "--";
+            document.getElementById('hud-temps-bas').innerText = "--";
+            return;
+        }
         const v0 = parseFloat(document.getElementById('v0-input').value);
         let altMortier = parseFloat(document.getElementById('alt-mortier').value) || 0;
         let altCible = parseFloat(document.getElementById('alt-cible').value) || 0;
