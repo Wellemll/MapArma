@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL | HD EDITION</title>
+    <title>ALTIS COMMAND TERMINAL | MULTI-SYSTEMS</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://jetelain.github.io/Arma3Map/css/mapUtils.css" />
@@ -58,11 +58,11 @@
         #route-hud { position: absolute; top: 15px; left: 310px; width: 250px; background: rgba(13, 17, 23, 0.95); border: 1px solid var(--blue); border-radius: 4px; padding: 10px; font-family: 'JetBrains Mono', monospace; color: white; z-index: 1002; display: none; box-shadow: 0 0 15px rgba(0, 210, 255, 0.2); }
         #route-hud .hud-header { font-family: 'Orbitron', sans-serif; color: var(--blue); text-align: center; font-size: 0.8rem; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
         
-        #charge-select, .alt-input, #transport-select { background: rgba(0,0,0,0.5); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; box-sizing: border-box; outline: none; border-radius: 3px; margin-bottom: 4px;}
-        #charge-select, .alt-input { color: var(--orange); }
+        select.alt-input, input.alt-input { background: rgba(0,0,0,0.5); border: 1px solid var(--orange); padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; width: 100%; box-sizing: border-box; outline: none; border-radius: 3px; margin-bottom: 4px; color: white;}
+        #weapon-select { border-color: var(--primary); color: var(--primary); font-weight: bold; margin-bottom: 8px; }
+        #charge-select { color: var(--orange); }
         #transport-select { color: var(--blue); border-color: var(--blue); margin: 4px 0; }
-        #charge-select option, #transport-select option { background: #111; color: white; }
-        .alt-input { margin-top: 2px; color: white; }
+        select.alt-input option { background: #111; color: white; }
         .alt-input::placeholder { color: #555; }
         .alt-container { display: flex; gap: 5px; margin-top: 5px; }
         .alt-box { flex: 1; text-align: center; }
@@ -144,26 +144,27 @@
 
     <div id="artillery-hud">
         <button class="close-hud" onclick="fermerHud()">X</button>
-        <div class="hud-header">RAPPORT BALISTIQUE (DÉVERROUILLÉ)</div>
+        <div class="hud-header">SYSTÈME DE CIBLAGE (RHS)</div>
         
         <div class="hud-data">
-            <label style="color:var(--orange); font-weight:bold;">SÉLECTION CHARGE (M252 81mm):</label>
-            <select id="charge-select" onchange="updateV0()">
-                <option value="42">CHARGE 0 (RHS: 42 m/s)</option>
-                <option value="94">CHARGE 1 (RHS: 94 m/s)</option>
-                <option value="188" selected>CHARGE 2 (RHS: 188 m/s)</option>
-                <option value="425">CHARGE 3 (RHS: 425 m/s)</option>
-                <option value="1675">CHARGE 4 (RHS: 1675 m/s)</option>
+            <label style="color:var(--primary); font-weight:bold;">SÉLECTION ARMEMENT :</label>
+            <select id="weapon-select" class="alt-input" onchange="changerArme()">
+                <option value="m252">M252 (81mm) - US/OTAN</option>
+                <option value="podnos">2B14 Podnos (82mm) - RU/OPFOR</option>
             </select>
+
+            <label style="color:var(--orange); font-weight:bold;">SÉLECTION CHARGE :</label>
+            <select id="charge-select" class="alt-input" onchange="updateV0()">
+                </select>
             
             <div class="alt-container" style="background: rgba(255, 157, 0, 0.1); padding: 5px; border-radius: 4px; border: 1px dashed var(--orange); margin-bottom: 5px;">
                 <div class="alt-box">
                     <label style="color:var(--blue);">VITESSE (m/s)</label>
-                    <input type="number" id="v0-input" class="alt-input" value="188" step="0.01" oninput="majArtillerie()">
+                    <input type="number" id="v0-input" class="alt-input" step="0.01" oninput="majArtillerie()">
                 </div>
                 <div class="alt-box">
                     <label style="color:var(--red);">COEFF. AIR</label>
-                    <input type="number" id="air-friction" class="alt-input" value="-0.00057" step="0.00001" oninput="majArtillerie()">
+                    <input type="number" id="air-friction" class="alt-input" step="0.00001" oninput="majArtillerie()">
                 </div>
             </div>
 
@@ -203,7 +204,7 @@
         <div style="font-size: 0.7rem; color: #8892b0;">
             <p>DISTANCE TOTALE : <b id="route-dist" style="color: white;">0m</b></p>
             <label style="color:var(--blue); font-weight:bold;">TRANSPORT :</label>
-            <select id="transport-select" onchange="majRoute()">
+            <select id="transport-select" class="alt-input" onchange="majRoute()">
                 <option value="5">INFANTERIE (5 km/h)</option>
                 <option value="40">BLINDÉ LOURD (40 km/h)</option>
                 <option value="60" selected>VHC LÉGER (60 km/h)</option>
@@ -248,6 +249,50 @@
         'Dot': { isVector: true }
     };
 
+    // ==========================================
+    // BASE DE DONNÉES ARMEMENT RHS
+    // ==========================================
+    const armesRHS = {
+        "m252": {
+            friction: -0.00057,
+            charges: [
+                { nom: "CHARGE 0", vit: 42 },
+                { nom: "CHARGE 1", vit: 94 },
+                { nom: "CHARGE 2", vit: 188, defaut: true },
+                { nom: "CHARGE 3", vit: 425 },
+                { nom: "CHARGE 4", vit: 1675 }
+            ]
+        },
+        "podnos": {
+            friction: -0.00060, // VALEUR À VÉRIFIER EN JEU
+            charges: [
+                { nom: "CHARGE 0", vit: 60 },  // VALEUR À VÉRIFIER EN JEU
+                { nom: "CHARGE 1", vit: 120, defaut: true }, // VALEUR À VÉRIFIER EN JEU
+                { nom: "CHARGE 2", vit: 200 }  // VALEUR À VÉRIFIER EN JEU
+            ]
+        }
+    };
+
+    function changerArme() {
+        const armeId = document.getElementById('weapon-select').value;
+        const data = armesRHS[armeId];
+        
+        document.getElementById('air-friction').value = data.friction;
+        
+        const selectCharge = document.getElementById('charge-select');
+        selectCharge.innerHTML = ""; // Vider l'ancien menu
+        
+        data.charges.forEach(c => {
+            let option = document.createElement("option");
+            option.value = c.vit;
+            option.text = `${c.nom} (RHS: ${c.vit} m/s)`;
+            if (c.defaut) option.selected = true;
+            selectCharge.add(option);
+        });
+        
+        updateV0(); // Mets à jour la vitesse et recalcule
+    }
+
     // === INITIALISATION SÉCURISÉE AVEC JQUERY ===
     $(function () {
         var mapInfos = Arma3Map.Maps.altis; 
@@ -275,9 +320,11 @@
 
         L.latlngGraticule().addTo(map);
         L.control.gridMousePosition().addTo(map);
+        
+        // Initialiser le menu des armes au démarrage
+        changerArme();
 
         // === GESTION DES CLICS ET DESSINS ===
-        
         map.on('mousemove', e => { 
             if (drawingPolyline) {
                 let start;
@@ -370,7 +417,8 @@
                     majArtillerie(); 
                     const elevTxt = document.getElementById('hud-elev-haut').innerText;
                     const volTxt = document.getElementById('hud-temps-haut').innerText;
-                    const tooltipText = `DIST: ${distMeters}m — AZ: ${azimut.toFixed(2)}°<br>ÉLÉV: <span style="color:var(--primary)">${elevTxt}</span> — VOL: ${volTxt}`;
+                    const armeNom = document.getElementById('weapon-select').options[document.getElementById('weapon-select').selectedIndex].text.split(' ')[0];
+                    const tooltipText = `[${armeNom}] DIST: ${distMeters}m — AZ: ${azimut.toFixed(2)}°<br>ÉLÉV: <span style="color:var(--primary)">${elevTxt}</span> — VOL: ${volTxt}`;
                     save({ x: p1[0], y: p1[1], type: 'mesure_line', points_json: JSON.stringify([p1, p2]), label: `#000000|40|${tooltipText}` });
                     pointsBuffer = [];
                     if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
@@ -425,20 +473,17 @@
     }
 
     document.addEventListener('keydown', function(e) {
-        // Ignorer si l'utilisateur est en train de taper des chiffres ou du texte dans un menu
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
-        // TOUCHE ESCAPE : Annuler totalement le tracé
         if (e.key === 'Escape') {
             if (pointsBuffer.length > 0 || routePoints.length > 0 || pendingIconPos) {
                 annulerTrace();
             }
         }
         
-        // TOUCHE Z : Faire un "Undo" (Annuler le dernier point cliqué)
         if (e.key.toLowerCase() === 'z') {
             if (currentType === 'route' && routePoints.length > 0) {
-                routePoints.pop(); // Retire le dernier clic
+                routePoints.pop(); 
                 if (routePoints.length === 0) {
                     annulerTrace();
                 } else {
@@ -454,12 +499,12 @@
                     majRoute();
                 }
             } else if (pointsBuffer.length > 0) {
-                pointsBuffer.pop(); // Retire le dernier clic
+                pointsBuffer.pop(); 
                 if (pointsBuffer.length === 0) {
                     annulerTrace();
                 } else {
                     const lastPt = pointsBuffer[pointsBuffer.length - 1];
-                    if (drawingPolyline) drawingPolyline.setLatLngs([lastPt, lastPt]); // Raccroche la ligne visuelle
+                    if (drawingPolyline) drawingPolyline.setLatLngs([lastPt, lastPt]); 
                     
                     if (currentType === 'mesure') {
                         document.getElementById('dist-input').value = "";
@@ -468,7 +513,7 @@
                     }
                 }
             } else if (pendingIconPos) {
-                annulerTrace(); // Annule la pose de l'icône si on est à l'étape 2 (rotation)
+                annulerTrace(); 
             }
         }
     });
