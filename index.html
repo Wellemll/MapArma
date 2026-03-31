@@ -33,7 +33,7 @@
         .audio-panel { margin-top: 10px; padding: 10px; border: 1px solid #1a222d; border-radius: 4px; background: rgba(0,0,0,0.4); box-shadow: inset 0 0 10px black; }
         .mute-btn { background: #111; border: 1px solid #333; cursor: pointer; font-size: 1.1rem; padding: 2px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: 0.2s; min-width: 45px; color: white; }
         .mute-btn.active { border-color: var(--red); color: var(--red); }
-        #map { flex-grow: 1; background: #000; cursor: crosshair; position: relative; }
+        #map { flex-grow: 1; background: #222; cursor: crosshair; position: relative; }
         .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; text-shadow: 0 0 5px var(--primary); }
         .leaflet-image-layer { image-rendering: crisp-edges; image-rendering: pixelated; filter: brightness(1) contrast(1); }
         .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 2px 2px 2px black; font-size: 14px; white-space: nowrap; }
@@ -212,30 +212,62 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://jetelain.github.io/Arma3Map/maps/altis.js"></script>
+
+<script src="https://mapsdata.plan-ops.fr/maps/altis.js"></script>
 
 <script>
-    // INITIALISATION EXACTE DE LA CARTE ARMA3MAP
-    var map = L.map("map", {
-        crs: mapInfos.CRS,
-        minZoom: mapInfos.minZoom,
-        maxZoom: mapInfos.maxZoom,
-        zoomControl: false
-    });
+    // =========================================================================
+    // SYSTEME DE SECOURS ANTI-CRASH (Au cas où le serveur externe est bloqué)
+    // =========================================================================
+    if (typeof mapInfos === 'undefined') {
+        console.warn("Serveur Arma3Map indisponible. Activation du mode Secours intégré.");
+        var mapInfos = {
+            CRS: L.extend({}, L.CRS.Simple, {
+                transformation: new L.Transformation(1/1.875, 0, -1/1.875, 30720/1.875)
+            }),
+            minZoom: 0,
+            maxZoom: 6,
+            center: [15360, 15360],
+            tileSize: 256,
+            tilePattern: "/data/tiles/altis/topo/{z}/{x}/{y}.png" // Route vers les images
+        };
+    }
 
-    // Chargement de la grille d'images de Jetelain (Le "puzzle")
-    L.tileLayer(
-        "https://jetelain.github.io/Arma3Map" + mapInfos.tilePattern,
-        {
-            attribution: mapInfos.attribution,
+    try {
+        const mapSize = 30720;
+        const bounds = [[0, 0], [mapSize, mapSize]];
+
+        // INITIALISATION DE LA CARTE 
+        var map = L.map("map", {
+            crs: mapInfos.CRS,
+            minZoom: mapInfos.minZoom,
+            maxZoom: mapInfos.maxZoom,
+            zoomControl: false
+        });
+
+        // CHARGEMENT DES IMAGES HAUTE RÉSOLUTION DEPUIS LE SERVEUR CLOUD 
+        var tileLayer = L.tileLayer("https://mapsdata.plan-ops.fr" + mapInfos.tilePattern, {
             tileSize: mapInfos.tileSize,
-            noWrap: true
-        }
-    ).addTo(map);
+            noWrap: true,
+            bounds: bounds
+        }).addTo(map);
 
-    // On utilise la méthode officielle pour centrer la caméra sans planter !
-    var defaultCenter = mapInfos.center || [15360, 15360];
-    map.setView(defaultCenter, 2);
+        // SYSTÈME DE SECOURS ABSOLU: Si les tuiles internet 404 (Firewall strict), 
+        // ça charge automatiquement votre vieille image "altis.webp" en fond !
+        tileLayer.on('tileerror', function() {
+            if (!window.fallbackDeclenche) {
+                window.fallbackDeclenche = true;
+                updateStatus("CONNEXION TUILES ÉCHOUÉE : UTILISATION IMAGE LOCALE (altis.webp)");
+                L.imageOverlay('altis.webp', bounds).addTo(map);
+            }
+        });
+
+        // Cadrage parfait sur le centre de l'île
+        map.setView(mapInfos.center, 2);
+
+    } catch (error) {
+        alert("CRASH EVITÉ: Impossible de lancer la carte. " + error);
+    }
 
     // ÉCHELLE PARFAITE: 1 unité sur cette carte = 1 mètre dans Arma 3
     const ECHELLE_PXM = 1.0; 
@@ -446,13 +478,8 @@
 
     function toggleMute() { isMuted = !isMuted; const btn = document.getElementById('mute-btn'); btn.innerHTML = isMuted ? "🔇" : "🔊"; btn.classList.toggle('active', isMuted); }
     function playTacticalPing() { if (isMuted) return; try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const vol = document.getElementById('volSlider').value; const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(880, ctx.currentTime); gain.gain.setValueAtTime(vol * 0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1); osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.1); } catch(e){} }
-    
-    function jumpTo(pos) { 
-        map.flyTo(pos, 4, { animate: true, duration: 1.2 }); 
-        updateStatus(`DÉPLOIEMENT EN COURS...`); 
-    }
-    
-    map.on('contextmenu', (e) => { alert("Coordonnées (X,Y) : [" + Math.round(e.latlng.lng) + ", " + Math.round(e.latlng.lat) + "]"); });
+    function jumpTo(pos) { map.flyTo(pos, 4, { animate: true, duration: 1.2 }); updateStatus(`DÉPLOIEMENT : ZONE ${pos}`); }
+    map.on('contextmenu', (e) => { alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]"); });
 
     function setInterMode(m) { fermerHud(); fermerRouteHud(); interMode = m; ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active'); load(); }
     function setType(t, b) { 
@@ -539,7 +566,7 @@
                                 const dM = (distPx / ECHELLE_PXM).toFixed(0);
                                 let dx = pts[1][1] - pts[0][1];
                                 let dy = pts[1][0] - pts[0][0];
-                                let az = (90 - (Math.atan2(dx, dy) * 180 / Math.PI) + 360) % 360;
+                                let az = (90 - (Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360;
                                 
                                 document.getElementById('artillery-hud').style.display = 'block';
                                 document.getElementById('dist-input').value = dM;
@@ -584,7 +611,7 @@
                 
                 let dx = e.latlng.lng - start[1];
                 let dy = e.latlng.lat - start[0];
-                let angle = Math.atan2(dx, dy) * (180 / Math.PI);
+                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 let azimut = (90 - angle + 360) % 360; 
                 
                 document.getElementById('dist-input').value = distMeters;
@@ -676,7 +703,7 @@
                 
                 let dx = p2[1] - p1[1];
                 let dy = p2[0] - p1[0];
-                let angle = Math.atan2(dx, dy) * (180 / Math.PI);
+                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 let azimut = (90 - angle + 360) % 360; 
                 
                 document.getElementById('dist-input').value = distMeters;
