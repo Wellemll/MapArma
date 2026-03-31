@@ -75,12 +75,12 @@
         <div class="header">ALTIS</div>
         <div class="section-label">SIGNETS TACTIQUES</div>
         <div class="bookmark-grid">
-            <button class="btn-jump" onclick="jumpTo([596, 202])">KAVALA</button>
-            <button class="btn-jump" onclick="jumpTo([565, 1089])">PYRGOS</button>
-            <button class="btn-jump" onclick="jumpTo([987, 891])">ATHIRA</button>
-            <button class="btn-jump" onclick="jumpTo([851, 931])">AIRPORT</button>
-            <button class="btn-jump" onclick="jumpTo([1169, 1719])">SOFIA</button>
-            <button class="btn-jump" onclick="jumpTo([587, 1744])">AGIA MARINA</button>
+            <button class="btn-jump" onclick="jumpTo([11100, 3600])">KAVALA</button>
+            <button class="btn-jump" onclick="jumpTo([12600, 16800])">PYRGOS</button>
+            <button class="btn-jump" onclick="jumpTo([18700, 14000])">ATHIRA</button>
+            <button class="btn-jump" onclick="jumpTo([16300, 14500])">AIRPORT</button>
+            <button class="btn-jump" onclick="jumpTo([21300, 25600])">SOFIA</button>
+            <button class="btn-jump" onclick="jumpTo([20000, 20000])">AGIA MARINA</button>
         </div>
         <div class="section-label">MODE OPÉRATOIRE</div>
         <div class="mode-selector">
@@ -213,12 +213,30 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -3, maxZoom: 3, zoomControl: false });
-    const bounds = [[0, 0], [1512, 2048]];
-    L.imageOverlay('altis.webp', bounds).addTo(map);
+    // INITIALISATION DE LA CARTE HAUTE RÉSOLUTION (Arma3Map)
+    const map = L.map('map', {
+        crs: L.CRS.Simple,
+        minZoom: 0,
+        maxZoom: 6,
+        zoomControl: false
+    });
+
+    const mapSize = 30720;
+    const bounds = [[0, 0], [mapSize, mapSize]];
+
+    L.tileLayer('https://jetelain.github.io/Arma3Map/Tiles/altis/topo/{z}/{x}/{y}.png', {
+        minZoom: 0,
+        maxZoom: 6,
+        noWrap: true,
+        bounds: bounds,
+        tms: false
+    }).addTo(map);
+
     map.fitBounds(bounds);
 
-    const ECHELLE_PXM = 0.0707; 
+    // CORRECTION DE L'ÉCHELLE POUR LA NOUVELLE CARTE
+    const ECHELLE_PXM = 1.0; 
+    
     let artillerieCible = { p1: null, p2: null }; 
 
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
@@ -553,7 +571,6 @@
                 start = pointsBuffer[0];
                 drawingPolyline.setLatLngs([start, e.latlng]);
                 
-                // CALCUL EN TEMPS RÉEL (ARTILLERIE)
                 const distPx = Math.sqrt(Math.pow(e.latlng.lng - start[1], 2) + Math.pow(e.latlng.lat - start[0], 2));
                 const distMeters = (distPx / ECHELLE_PXM).toFixed(0);
                 
@@ -570,7 +587,6 @@
                 start = routePoints[routePoints.length - 1];
                 drawingPolyline.setLatLngs([start, e.latlng]);
                 
-                // CALCUL EN TEMPS RÉEL (ROUTE)
                 const distPx = Math.sqrt(Math.pow(e.latlng.lng - start[1], 2) + Math.pow(e.latlng.lat - start[0], 2));
                 const addedDist = (distPx / ECHELLE_PXM);
                 const tempTotalDist = currentRouteDist + addedDist;
