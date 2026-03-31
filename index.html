@@ -2,8 +2,11 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL | RHS UNLOCKED</title>
+    <title>ALTIS COMMAND TERMINAL | HD EDITION</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://jetelain.github.io/Arma3Map/css/mapUtils.css" />
+    
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #00ff41; --blue: #00d2ff; --red: #ff3e3e; --orange: #ff9d00; --bg: #05070a; }
@@ -33,7 +36,7 @@
         .audio-panel { margin-top: 10px; padding: 10px; border: 1px solid #1a222d; border-radius: 4px; background: rgba(0,0,0,0.4); box-shadow: inset 0 0 10px black; }
         .mute-btn { background: #111; border: 1px solid #333; cursor: pointer; font-size: 1.1rem; padding: 2px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: 0.2s; min-width: 45px; color: white; }
         .mute-btn.active { border-color: var(--red); color: var(--red); }
-        #map { flex-grow: 1; background: #222; cursor: crosshair; position: relative; }
+        #map { flex-grow: 1; background: #9bb9c6; cursor: crosshair; position: relative; } /* Couleur d'eau Arma par défaut */
         .status-bar { position: absolute; bottom: 15px; right: 15px; background: rgba(13, 17, 23, 0.9); padding: 6px 12px; border: 1px solid var(--primary); font-size: 0.6rem; color: var(--primary); z-index: 1001; text-shadow: 0 0 5px var(--primary); }
         .leaflet-image-layer { image-rendering: crisp-edges; image-rendering: pixelated; filter: brightness(1) contrast(1); }
         .map-label { background: none !important; border: none !important; box-shadow: none !important; color: white; font-weight: bold; text-shadow: 2px 2px 2px black; font-size: 14px; white-space: nowrap; }
@@ -66,6 +69,9 @@
 
         .tooltip-artillery { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--orange) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--orange); line-height: 1.4; text-align: center; }
         .tooltip-route { background: rgba(0, 0, 0, 0.8) !important; border: 1px solid var(--blue) !important; color: white !important; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 0 5px var(--blue); line-height: 1.4; text-align: center; }
+
+        /* Ajustement UI Arma3Map */
+        .leaflet-control-mouseposition { background: rgba(0,0,0,0.8); color: var(--primary); font-family: 'JetBrains Mono', monospace; border: 1px solid var(--primary); padding: 5px; font-size: 14px; text-shadow: 0 0 5px var(--primary); }
     </style>
 </head>
 <body>
@@ -212,77 +218,190 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script src="https://mapsdata.plan-ops.fr/maps/altis.js"></script>
-
-<script>
-    // =========================================================================
-    // SYSTEME DE SECOURS ANTI-CRASH (Au cas où le serveur externe est bloqué)
-    // =========================================================================
-    if (typeof mapInfos === 'undefined') {
-        console.warn("Serveur Arma3Map indisponible. Activation du mode Secours intégré.");
-        var mapInfos = {
-            CRS: L.extend({}, L.CRS.Simple, {
-                transformation: new L.Transformation(1/1.875, 0, -1/1.875, 30720/1.875)
-            }),
-            minZoom: 0,
-            maxZoom: 6,
-            center: [15360, 15360],
-            tileSize: 256,
-            tilePattern: "/data/tiles/altis/topo/{z}/{x}/{y}.png" // Route vers les images
-        };
-    }
-
-    try {
-        const mapSize = 30720;
-        const bounds = [[0, 0], [mapSize, mapSize]];
-
-        // INITIALISATION DE LA CARTE 
-        var map = L.map("map", {
-            crs: mapInfos.CRS,
-            minZoom: mapInfos.minZoom,
-            maxZoom: mapInfos.maxZoom,
-            zoomControl: false
-        });
-
-        // CHARGEMENT DES IMAGES HAUTE RÉSOLUTION DEPUIS LE SERVEUR CLOUD 
-        var tileLayer = L.tileLayer("https://mapsdata.plan-ops.fr" + mapInfos.tilePattern, {
-            tileSize: mapInfos.tileSize,
-            noWrap: true,
-            bounds: bounds
-        }).addTo(map);
-
-        // SYSTÈME DE SECOURS ABSOLU: Si les tuiles internet 404 (Firewall strict), 
-        // ça charge automatiquement votre vieille image "altis.webp" en fond !
-        tileLayer.on('tileerror', function() {
-            if (!window.fallbackDeclenche) {
-                window.fallbackDeclenche = true;
-                updateStatus("CONNEXION TUILES ÉCHOUÉE : UTILISATION IMAGE LOCALE (altis.webp)");
-                L.imageOverlay('altis.webp', bounds).addTo(map);
-            }
-        });
-
-        // Cadrage parfait sur le centre de l'île
-        map.setView(mapInfos.center, 2);
-
-    } catch (error) {
-        alert("CRASH EVITÉ: Impossible de lancer la carte. " + error);
-    }
-
-    // ÉCHELLE PARFAITE: 1 unité sur cette carte = 1 mètre dans Arma 3
-    const ECHELLE_PXM = 1.0; 
-    
+<script src="https://unpkg.com/jquery@3.5.1/dist/jquery.min.js"></script>
+<script src="https://jetelain.github.io/Arma3Map/js/mapUtils.js"></script>
+<script src="https://jetelain.github.io/Arma3Map/maps/altis.js"></script> <script>
+    // Variables globales
+    var map;
+    const ECHELLE_PXM = 1.0; // Echelle 1:1 certifiée Arma3Map
     let artillerieCible = { p1: null, p2: null }; 
-
     let interMode = 'ADD', currentType = 'Infantry', currentColor = '#00ff41', currentSize = 40;
     let pointsBuffer = [], renderedMarkers = {}, isSaving = false, lastCount = 0, isMuted = false;
     let drawingPolyline; 
     let pendingIconPos = null;
-    
     let routePoints = [];
     let routePolyline = null;
     let currentRouteDist = 0;
 
+    // === INITIALISATION SÉCURISÉE AVEC JQUERY (La méthode officielle) ===
+    $(function () {
+        // Changer altis par tanoa ici si vous changez de map
+        var mapInfos = Arma3Map.Maps.altis; 
+
+        // Création de la carte avec les paramètres officiels
+        map = L.map("map", {
+          minZoom: mapInfos.minZoom,
+          maxZoom: mapInfos.maxZoom,
+          crs: mapInfos.CRS,
+          zoomControl: false // Garde votre interface propre
+        });
+
+        // Chargement des tuiles HD topographiques
+        L.tileLayer(
+          "https://jetelain.github.io/Arma3Map" + mapInfos.tilePattern,
+          {
+            attribution: mapInfos.attribution,
+            tileSize: mapInfos.tileSize,
+            noWrap: true
+          }
+        ).addTo(map);
+
+        // Cadrage de départ officiel
+        map.setView(mapInfos.center, mapInfos.defaultZoom);
+
+        // NOUVEAUTÉ 1 : Ajoute le quadrillage GPS natif d'Arma sur la carte
+        L.latlngGraticule().addTo(map);
+
+        // NOUVEAUTÉ 2 : Affiche le GPS en temps réel sous la souris (en bas à gauche)
+        L.control.gridMousePosition().addTo(map);
+
+        // === RÉATTACHEMENT DE VOS OUTILS TACTIQUES À LA CARTE ===
+        
+        map.on('mousemove', e => { 
+            if (drawingPolyline) {
+                let start;
+                if (currentType === 'mesure' && pointsBuffer.length > 0) {
+                    start = pointsBuffer[0];
+                    drawingPolyline.setLatLngs([start, e.latlng]);
+                    const distPx = Math.sqrt(Math.pow(e.latlng.lng - start[1], 2) + Math.pow(e.latlng.lat - start[0], 2));
+                    const distMeters = (distPx / ECHELLE_PXM).toFixed(0);
+                    let dx = e.latlng.lng - start[1];
+                    let dy = e.latlng.lat - start[0];
+                    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                    let azimut = (90 - angle + 360) % 360; 
+                    document.getElementById('dist-input').value = distMeters;
+                    document.getElementById('hud-azimut').innerText = `${azimut.toFixed(2)}°`;
+                    majArtillerie();
+                }
+                else if (currentType === 'route' && routePoints.length > 0) {
+                    start = routePoints[routePoints.length - 1];
+                    drawingPolyline.setLatLngs([start, e.latlng]);
+                    const distPx = Math.sqrt(Math.pow(e.latlng.lng - start[1], 2) + Math.pow(e.latlng.lat - start[0], 2));
+                    const addedDist = (distPx / ECHELLE_PXM);
+                    const tempTotalDist = currentRouteDist + addedDist;
+                    document.getElementById('route-dist').innerText = `${tempTotalDist.toFixed(0)}m`;
+                    const speedKmh = parseFloat(document.getElementById('transport-select').value);
+                    const speedMs = speedKmh / 3.6;
+                    const timeSec = tempTotalDist / speedMs;
+                    let etaTxt = timeSec < 60 ? `${Math.round(timeSec)}s` : `${Math.floor(timeSec / 60)}m ${Math.round(timeSec % 60)}s`;
+                    document.getElementById('route-eta').innerText = etaTxt;
+                }
+                else if (pendingIconPos) {
+                    start = pendingIconPos;
+                    drawingPolyline.setLatLngs([start, e.latlng]);
+                }
+                else if (pointsBuffer.length > 0) {
+                    start = pointsBuffer[pointsBuffer.length - 1];
+                    drawingPolyline.setLatLngs([start, e.latlng]);
+                }
+            }
+        });
+
+        map.on('click', e => {
+            if (interMode !== 'ADD') return;
+            const pos = [e.latlng.lat, e.latlng.lng];
+
+            if (currentType === 'route') {
+                routePoints.push(pos);
+                if (routePoints.length === 1) {
+                    document.getElementById('route-hud').style.display = 'block';
+                    currentRouteDist = 0;
+                    majRoute();
+                    updateStatus("TRACÉ EN COURS...");
+                    routePolyline = L.polyline([pos], {color: currentColor, weight: 3, dashArray: '5, 5'}).addTo(map);
+                    drawingPolyline = L.polyline([pos, pos], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map);
+                } else {
+                    const prev = routePoints[routePoints.length - 2];
+                    const distPx = Math.sqrt(Math.pow(pos[1]-prev[1], 2) + Math.pow(pos[0]-prev[0], 2));
+                    currentRouteDist += (distPx / ECHELLE_PXM);
+                    routePolyline.setLatLngs(routePoints);
+                    majRoute();
+                }
+                return;
+            }
+
+            if (currentType === 'mesure') {
+                pointsBuffer.push(pos);
+                if (pointsBuffer.length === 1) {
+                    if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+                    updateStatus("CLIQUEZ SUR LA CIBLE...");
+                    document.getElementById('artillery-hud').style.display = 'block';
+                    document.getElementById('dist-input').value = "";
+                    document.getElementById('hud-azimut').innerText = "--";
+                    document.getElementById('hud-elev-haut').innerText = "--";
+                    document.getElementById('hud-temps-haut').innerText = "--";
+                    document.getElementById('hud-elev-bas').innerText = "--";
+                    document.getElementById('hud-temps-bas').innerText = "--";
+                    drawingPolyline = L.polyline([pos, pos], {color: '#000000', dashArray: '5, 10'}).addTo(map);
+                } else {
+                    artillerieCible.p1 = pointsBuffer[0]; 
+                    artillerieCible.p2 = pointsBuffer[1]; 
+                    const p1 = artillerieCible.p1;
+                    const p2 = artillerieCible.p2;
+                    const distPixels = Math.sqrt(Math.pow(p2[1]-p1[1], 2) + Math.pow(p2[0]-p1[0], 2));
+                    const distMeters = (distPixels / ECHELLE_PXM).toFixed(0);
+                    let dx = p2[1] - p1[1];
+                    let dy = p2[0] - p1[0];
+                    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                    let azimut = (90 - angle + 360) % 360; 
+                    document.getElementById('dist-input').value = distMeters;
+                    document.getElementById('hud-azimut').innerText = `${azimut.toFixed(2)}°`;
+                    majArtillerie(); 
+                    const elevTxt = document.getElementById('hud-elev-haut').innerText;
+                    const volTxt = document.getElementById('hud-temps-haut').innerText;
+                    const tooltipText = `DIST: ${distMeters}m — AZ: ${azimut.toFixed(2)}°<br>ÉLÉV: <span style="color:var(--primary)">${elevTxt}</span> — VOL: ${volTxt}`;
+                    save({ x: p1[0], y: p1[1], type: 'mesure_line', points_json: JSON.stringify([p1, p2]), label: `#000000|40|${tooltipText}` });
+                    pointsBuffer = [];
+                    if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+                }
+                return;
+            }
+
+            if (iconFiles[currentType] && currentType !== 'Dot') {
+                if (!pendingIconPos) { pendingIconPos = pos; updateStatus("ORIENTEZ L'UNITÉ (CLIC 2)..."); drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map); }
+                else {
+                    const dx = e.latlng.lng - pendingIconPos[1];
+                    const dy = e.latlng.lat - pendingIconPos[0];
+                    let angle = Math.atan2(dx, dy) * (180 / Math.PI);
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const finalRot = dist < 5 ? "" : Math.round(angle);
+                    save({ x: pendingIconPos[0], y: pendingIconPos[1], type: currentType, label: `${currentColor}|${currentSize}||${finalRot}` });
+                    pendingIconPos = null;
+                    if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+                }
+                return;
+            }
+
+            if (currentType === 'text') {
+                const txt = prompt("Texte :");
+                if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${txt}` });
+            } else if (['arrow', 'zone', 'zone4', 'circle'].includes(currentType)) {
+                pointsBuffer.push(pos);
+                let limit = (currentType === 'zone') ? 3 : (currentType === 'zone4' ? 4 : 2);
+                if (pointsBuffer.length === limit) { save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` }); pointsBuffer = []; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } }
+                else { if (!drawingPolyline) drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map); }
+            } else { save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` }); }
+        });
+
+        // Lance le chargement des pings enregistrés
+        setInterval(load, 1000);
+        load();
+    });
+
+    // ==========================================
+    // LOGIQUE EXTERNE (Balistique, Menus, APIs)
+    // ==========================================
+    
     const iconFiles = {
         'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
         'Vehicule': { blue: 'Icons/Vehicule.png', red: 'Icons/Vehicule2.png' },
@@ -296,209 +415,84 @@
         'Dot': { isVector: true }
     };
 
-    function updateV0() {
-        document.getElementById('v0-input').value = document.getElementById('charge-select').value;
-        majArtillerie();
-    }
-
-    function ouvrirHudManuel() {
-        document.getElementById('artillery-hud').style.display = 'block';
-        document.getElementById('hud-azimut').innerText = "--";
-        updateStatus("CALCULATEUR MANUEL ACTIF");
-        majArtillerie();
-    }
+    function updateV0() { document.getElementById('v0-input').value = document.getElementById('charge-select').value; majArtillerie(); }
+    function ouvrirHudManuel() { document.getElementById('artillery-hud').style.display = 'block'; document.getElementById('hud-azimut').innerText = "--"; updateStatus("CALCULATEUR MANUEL ACTIF"); majArtillerie(); }
 
     function calculerTirRHS(distCible, v0, altShooter, altTarget) {
-        distCible = parseFloat(distCible);
-        altShooter = parseFloat(altShooter) || 0;
-        altTarget = parseFloat(altTarget) || 0;
+        distCible = parseFloat(distCible); altShooter = parseFloat(altShooter) || 0; altTarget = parseFloat(altTarget) || 0;
         let airFriction = parseFloat(document.getElementById('air-friction').value) || 0;
-
         if (distCible === 0 || isNaN(distCible)) return null;
 
         function simulerVol(angleDeg) {
-            const dt = 0.02; 
-            let x = 0;
-            let y = altShooter;
-            let vx = v0 * Math.cos(angleDeg * Math.PI / 180);
-            let vy = v0 * Math.sin(angleDeg * Math.PI / 180);
-            let t = 0;
-
+            const dt = 0.02; let x = 0; let y = altShooter;
+            let vx = v0 * Math.cos(angleDeg * Math.PI / 180); let vy = v0 * Math.sin(angleDeg * Math.PI / 180); let t = 0;
             while (y >= Math.min(altShooter, altTarget) - 200 && t < 200) {
-                let v = Math.sqrt(vx*vx + vy*vy);
-                let ax = airFriction * v * vx;
-                let ay = airFriction * v * vy - 9.81;
-
-                vx += ax * dt;
-                vy += ay * dt;
-                
-                x += vx * dt;
-                y += vy * dt;
-                t += dt;
-
-                if (vy < 0 && y <= altTarget) {
-                    let y_prev = y - vy * dt;
-                    let x_prev = x - vx * dt;
-                    let ratio = (altTarget - y) / (y_prev - y);
-                    let final_x = x - (x - x_prev) * ratio;
-                    return { distance: final_x, temps: t };
-                }
+                let v = Math.sqrt(vx*vx + vy*vy); let ax = airFriction * v * vx; let ay = airFriction * v * vy - 9.81;
+                vx += ax * dt; vy += ay * dt; x += vx * dt; y += vy * dt; t += dt;
+                if (vy < 0 && y <= altTarget) { let ratio = (altTarget - y) / ((y - vy * dt) - y); return { distance: x - (x - (x - vx * dt)) * ratio, temps: t }; }
             }
             return null; 
         }
 
         let minHaut = 45; let maxHaut = 89.9; let angleHaut = null; let tempsHaut = null;
-        for (let i = 0; i < 30; i++) {
-            let testAngle = (minHaut + maxHaut) / 2;
-            let sim = simulerVol(testAngle);
-            if (!sim) { maxHaut = testAngle; continue; }
-            if (sim.distance > distCible) minHaut = testAngle; else maxHaut = testAngle; 
-            angleHaut = testAngle; tempsHaut = sim.temps;
-        }
-
+        for (let i = 0; i < 30; i++) { let test = (minHaut + maxHaut) / 2; let sim = simulerVol(test); if (!sim) { maxHaut = test; continue; } if (sim.distance > distCible) minHaut = test; else maxHaut = test; angleHaut = test; tempsHaut = sim.temps; }
+        
         let minBas = 0.1; let maxBas = 45; let angleBas = null; let tempsBas = null;
-        for (let i = 0; i < 30; i++) {
-            let testAngle = (minBas + maxBas) / 2;
-            let sim = simulerVol(testAngle);
-            if (!sim) { minBas = testAngle; continue; }
-            if (sim.distance > distCible) maxBas = testAngle; else minBas = testAngle; 
-            angleBas = testAngle; tempsBas = sim.temps;
-        }
-
-        let verifHaut = simulerVol(angleHaut);
-        if (!verifHaut || Math.abs(verifHaut.distance - distCible) > 5) angleHaut = null;
-        let verifBas = simulerVol(angleBas);
-        if (!verifBas || Math.abs(verifBas.distance - distCible) > 5) angleBas = null;
+        for (let i = 0; i < 30; i++) { let test = (minBas + maxBas) / 2; let sim = simulerVol(test); if (!sim) { minBas = test; continue; } if (sim.distance > distCible) maxBas = test; else minBas = test; angleBas = test; tempsBas = sim.temps; }
 
         return {
-            haut: angleHaut ? `${angleHaut.toFixed(2)}°` : "HORS PORTÉE",
+            haut: (simulerVol(angleHaut) && Math.abs(simulerVol(angleHaut).distance - distCible) < 5) ? `${angleHaut.toFixed(2)}°` : "HORS PORTÉE",
             tempsHaut: angleHaut ? `${tempsHaut.toFixed(1)}s` : "--",
-            bas: angleBas ? `${angleBas.toFixed(2)}°` : "HORS PORTÉE",
+            bas: (simulerVol(angleBas) && Math.abs(simulerVol(angleBas).distance - distCible) < 5) ? `${angleBas.toFixed(2)}°` : "HORS PORTÉE",
             tempsBas: angleBas ? `${tempsBas.toFixed(1)}s` : "--"
         };
     }
 
     function majArtillerie() {
         let distMeters = parseFloat(document.getElementById('dist-input').value);
-        
-        if (!distMeters || isNaN(distMeters)) {
-            document.getElementById('hud-elev-haut').innerText = "--";
-            document.getElementById('hud-temps-haut').innerText = "--";
-            document.getElementById('hud-elev-bas').innerText = "--";
-            document.getElementById('hud-temps-bas').innerText = "--";
-            return;
-        }
-
+        if (!distMeters || isNaN(distMeters)) return;
         const v0 = parseFloat(document.getElementById('v0-input').value);
-        let valM = document.getElementById('alt-mortier').value;
-        let valC = document.getElementById('alt-cible').value;
-        
-        let altMortier = valM !== "" ? parseFloat(valM) : 0;
-        let altCible = valC !== "" ? parseFloat(valC) : 0;
-        
-        if (valM === "" && valC !== "") altMortier = altCible;
-        if (valC === "" && valM !== "") altCible = altMortier;
-        
+        let altMortier = parseFloat(document.getElementById('alt-mortier').value) || 0;
+        let altCible = parseFloat(document.getElementById('alt-cible').value) || 0;
         const tir = calculerTirRHS(distMeters, v0, altMortier, altCible);
         
-        if (tir) {
-            document.getElementById('hud-elev-haut').innerText = tir.haut;
-            document.getElementById('hud-temps-haut').innerText = tir.tempsHaut;
-            document.getElementById('hud-elev-bas').innerText = tir.bas;
-            document.getElementById('hud-temps-bas').innerText = tir.tempsBas;
-            updateStatus("CALCUL TERMINÉ");
-        } else {
-            document.getElementById('hud-elev-haut').innerText = "HORS PORTÉE";
-            document.getElementById('hud-temps-haut').innerText = "--";
-            document.getElementById('hud-elev-bas').innerText = "HORS PORTÉE";
-            document.getElementById('hud-temps-bas').innerText = "--";
-            updateStatus("CIBLE HORS PORTÉE (TROP LOIN/HAUT)");
-        }
+        document.getElementById('hud-elev-haut').innerText = tir ? tir.haut : "HORS PORTÉE";
+        document.getElementById('hud-temps-haut').innerText = tir ? tir.tempsHaut : "--";
+        document.getElementById('hud-elev-bas').innerText = tir ? tir.bas : "HORS PORTÉE";
+        document.getElementById('hud-temps-bas').innerText = tir ? tir.tempsBas : "--";
+        updateStatus(tir ? "CALCUL TERMINÉ" : "CIBLE HORS PORTÉE");
     }
 
     function majRoute() {
         document.getElementById('route-dist').innerText = `${currentRouteDist.toFixed(0)}m`;
-        const speedKmh = parseFloat(document.getElementById('transport-select').value);
-        const speedMs = speedKmh / 3.6;
-        
-        if (currentRouteDist === 0) {
-            document.getElementById('route-eta').innerText = "0s";
-            return;
-        }
-        
-        const timeSec = currentRouteDist / speedMs;
-        let etaTxt = "";
-        if (timeSec < 60) {
-            etaTxt = `${Math.round(timeSec)}s`;
-        } else {
-            const mins = Math.floor(timeSec / 60);
-            const secs = Math.round(timeSec % 60);
-            etaTxt = `${mins}m ${secs}s`;
-        }
-        document.getElementById('route-eta').innerText = etaTxt;
+        if (currentRouteDist === 0) { document.getElementById('route-eta').innerText = "0s"; return; }
+        const timeSec = currentRouteDist / (parseFloat(document.getElementById('transport-select').value) / 3.6);
+        document.getElementById('route-eta').innerText = timeSec < 60 ? `${Math.round(timeSec)}s` : `${Math.floor(timeSec / 60)}m ${Math.round(timeSec % 60)}s`;
     }
 
     function validerRoute() {
         if (routePoints.length < 2) return fermerRouteHud();
-        
-        const distTxt = document.getElementById('route-dist').innerText;
-        const etaTxt = document.getElementById('route-eta').innerText;
-        const transportInfo = document.getElementById('transport-select').options[document.getElementById('transport-select').selectedIndex].text;
-        const transportName = transportInfo.split('(')[0].trim();
-        const tooltipText = `ROUTE (${transportName})<br>DIST: ${distTxt} — ETA: ${etaTxt}`;
-        
-        save({ 
-            x: routePoints[0][0], y: routePoints[0][1],
-            type: 'mesure_line', 
-            points_json: JSON.stringify(routePoints), 
-            label: `${currentColor}|${currentSize}|${tooltipText}` 
-        });
-        
+        const transportName = document.getElementById('transport-select').options[document.getElementById('transport-select').selectedIndex].text.split('(')[0].trim();
+        const tooltipText = `ROUTE (${transportName})<br>DIST: ${document.getElementById('route-dist').innerText} — ETA: ${document.getElementById('route-eta').innerText}`;
+        save({ x: routePoints[0][0], y: routePoints[0][1], type: 'mesure_line', points_json: JSON.stringify(routePoints), label: `${currentColor}|${currentSize}|${tooltipText}` });
         fermerRouteHud();
     }
 
-    function fermerRouteHud() {
-        document.getElementById('route-hud').style.display = 'none';
-        routePoints = [];
-        currentRouteDist = 0;
-        if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
-        if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
-        if(currentType === 'route') updateStatus("LIAISON ÉTABLIE");
-    }
-
-    function fermerHud() {
-        document.getElementById('artillery-hud').style.display = 'none';
-        artillerieCible = { p1: null, p2: null };
-        if (currentType === 'mesure') {
-            pointsBuffer = [];
-            if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
-            updateStatus("LIAISON ÉTABLIE");
-        }
-    }
-
+    function fermerRouteHud() { document.getElementById('route-hud').style.display = 'none'; routePoints = []; currentRouteDist = 0; if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; } if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } if(currentType === 'route') updateStatus("LIAISON ÉTABLIE"); }
+    function fermerHud() { document.getElementById('artillery-hud').style.display = 'none'; artillerieCible = { p1: null, p2: null }; if (currentType === 'mesure') { pointsBuffer = []; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } updateStatus("LIAISON ÉTABLIE"); } }
+    
     function toggleMute() { isMuted = !isMuted; const btn = document.getElementById('mute-btn'); btn.innerHTML = isMuted ? "🔇" : "🔊"; btn.classList.toggle('active', isMuted); }
     function playTacticalPing() { if (isMuted) return; try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const vol = document.getElementById('volSlider').value; const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(880, ctx.currentTime); gain.gain.setValueAtTime(vol * 0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1); osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.1); } catch(e){} }
-    function jumpTo(pos) { map.flyTo(pos, 4, { animate: true, duration: 1.2 }); updateStatus(`DÉPLOIEMENT : ZONE ${pos}`); }
-    map.on('contextmenu', (e) => { alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]"); });
+    
+    function jumpTo(pos) { if(map) { map.flyTo(pos, 4, { animate: true, duration: 1.2 }); updateStatus(`DÉPLOIEMENT : ZONE`); } }
 
     function setInterMode(m) { fermerHud(); fermerRouteHud(); interMode = m; ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active'); load(); }
-    function setType(t, b) { 
-        fermerHud(); 
-        fermerRouteHud(); 
-        currentType = t; 
-        document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active')); 
-        b.classList.add('active'); 
-        pointsBuffer = []; 
-        pendingIconPos = null; 
-        if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } 
-        if(interMode !== 'ADD' && interMode !== 'EDIT') setInterMode('ADD'); 
-        updateStatus(`OUTIL : ${t.toUpperCase()}`); 
-    }
+    function setType(t, b) { fermerHud(); fermerRouteHud(); currentType = t; document.querySelectorAll('.icon-btn, .btn-util').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); pointsBuffer = []; pendingIconPos = null; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } if(interMode !== 'ADD' && interMode !== 'EDIT') setInterMode('ADD'); updateStatus(`OUTIL : ${t.toUpperCase()}`); }
     function updateSizePreview(val) { currentSize = val; document.getElementById('sizeVal').innerText = val + "px"; }
     function setColor(c, el) { currentColor = c; document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active')); el.classList.add('active'); if(drawingPolyline) drawingPolyline.setStyle({color: c}); if(routePolyline) routePolyline.setStyle({color: c}); }
 
     async function load() {
-        if (isSaving) return;
+        if (isSaving || !map) return;
         try {
             const res = await fetch('/pings');
             const data = await res.json();
@@ -511,9 +505,7 @@
                 const id = p.id.toString();
                 if (renderedMarkers[id]) return;
                 const parts = p.label ? p.label.split('|') : [];
-                const color = parts[0] || '#00ff41';
-                const size = parseInt(parts[1]) || 40;
-                const rot = parts[3]; 
+                const color = parts[0] || '#00ff41'; const size = parseInt(parts[1]) || 40; const rot = parts[3]; 
 
                 let layer;
                 if (p.type === 'text') { layer = L.marker([p.x, p.y], { icon: L.divIcon({ className: 'map-label', html: `<span style="color:${color}">${parts[2] || 'TEXTE'}</span>` })}); }
@@ -523,24 +515,11 @@
                     if (p.type === 'mesure_line') {
                         const isRoute = parts[2] && parts[2].includes("ROUTE");
                         let line = L.polyline(pts, {color: color, weight: 3, dashArray: '5, 10', bubblingMouseEvents: true});
-                        
-                        if (!isRoute) {
-                            let killRadiusPx = 35 * ECHELLE_PXM;
-                            let circle = L.circle(pts[1], {radius: killRadiusPx, color: '#ff3e3e', fillColor: '#ff3e3e', fillOpacity: 0.3, weight: 1, bubblingMouseEvents: true});
-                            layer = L.featureGroup([line, circle]);
-                        } else {
-                            layer = L.featureGroup([line]);
-                        }
-                        
-                        if (parts[2]) {
-                            const tipClass = isRoute ? 'tooltip-route' : 'tooltip-artillery';
-                            layer.bindTooltip(parts[2], {className: tipClass, sticky: true, direction: 'center'});
-                        }
-                    } else if (p.type.startsWith('zone')) {
-                        layer = L.polygon(pts, {color: color, fillOpacity: 0.3, bubblingMouseEvents: true});
-                    } else {
-                        layer = L.polyline(pts, {color: color, weight: 4, bubblingMouseEvents: true});
-                    }
+                        if (!isRoute) { let circle = L.circle(pts[1], {radius: 35, color: '#ff3e3e', fillColor: '#ff3e3e', fillOpacity: 0.3, weight: 1, bubblingMouseEvents: true}); layer = L.featureGroup([line, circle]); } 
+                        else { layer = L.featureGroup([line]); }
+                        if (parts[2]) layer.bindTooltip(parts[2], {className: isRoute ? 'tooltip-route' : 'tooltip-artillery', sticky: true, direction: 'center'});
+                    } else if (p.type.startsWith('zone')) { layer = L.polygon(pts, {color: color, fillOpacity: 0.3, bubblingMouseEvents: true}); } 
+                    else { layer = L.polyline(pts, {color: color, weight: 4, bubblingMouseEvents: true}); }
                 }
                 else if (p.type === 'Dot') { layer = L.circleMarker([p.x, p.y], { radius: size / 6, color: color, fillColor: color, fillOpacity: 1 }); }
                 else if (iconFiles[p.type]) {
@@ -552,39 +531,19 @@
                 
                 if (layer) { 
                     layer.on('click', (e) => { 
-                        if (interMode === 'ADD' && (currentType === 'mesure' || currentType === 'route')) {
-                            map.fire('click', e);
-                        } else if (interMode === 'EDIT' && p.points_json && p.type === 'mesure_line') {
+                        if (interMode === 'ADD' && (currentType === 'mesure' || currentType === 'route')) { map.fire('click', e); } 
+                        else if (interMode === 'EDIT' && p.points_json && p.type === 'mesure_line') {
                             L.DomEvent.stopPropagation(e);
                             const pts = JSON.parse(p.points_json);
-                            const isRoute = parts[2] && parts[2].includes("ROUTE");
-                            
-                            if (!isRoute) {
-                                artillerieCible.p1 = pts[0];
-                                artillerieCible.p2 = pts[1];
-                                const distPx = Math.sqrt(Math.pow(pts[1][1]-pts[0][1], 2) + Math.pow(pts[1][0]-pts[0][0], 2));
-                                const dM = (distPx / ECHELLE_PXM).toFixed(0);
-                                let dx = pts[1][1] - pts[0][1];
-                                let dy = pts[1][0] - pts[0][0];
-                                let az = (90 - (Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360;
-                                
+                            if (!(parts[2] && parts[2].includes("ROUTE"))) {
                                 document.getElementById('artillery-hud').style.display = 'block';
-                                document.getElementById('dist-input').value = dM;
-                                document.getElementById('hud-azimut').innerText = `${az.toFixed(2)}°`;
-                                majArtillerie();
-                                updateStatus("DONNÉES DE TIR RECHARGÉES");
+                                document.getElementById('dist-input').value = (Math.sqrt(Math.pow(pts[1][1]-pts[0][1], 2) + Math.pow(pts[1][0]-pts[0][0], 2))).toFixed(0);
+                                document.getElementById('hud-azimut').innerText = `${((90 - (Math.atan2(pts[1][0]-pts[0][0], pts[1][1]-pts[0][1]) * 180 / Math.PI) + 360) % 360).toFixed(2)}°`;
+                                majArtillerie(); updateStatus("DONNÉES DE TIR RECHARGÉES");
                             } else {
-                                document.getElementById('route-hud').style.display = 'block';
-                                routePoints = pts;
-                                currentRouteDist = 0;
-                                for(let i=1; i<pts.length; i++) {
-                                    const prev = pts[i-1];
-                                    const pos = pts[i];
-                                    const dp = Math.sqrt(Math.pow(pos[1]-prev[1], 2) + Math.pow(pos[0]-prev[0], 2));
-                                    currentRouteDist += (dp / ECHELLE_PXM);
-                                }
-                                majRoute();
-                                updateStatus("ITINÉRAIRE RECHARGÉ");
+                                document.getElementById('route-hud').style.display = 'block'; routePoints = pts; currentRouteDist = 0;
+                                for(let i=1; i<pts.length; i++) currentRouteDist += Math.sqrt(Math.pow(pts[i][1]-pts[i-1][1], 2) + Math.pow(pts[i][0]-pts[i-1][0], 2));
+                                majRoute(); updateStatus("ITINÉRAIRE RECHARGÉ");
                             }
                         } else if (interMode !== 'ADD') { 
                             L.DomEvent.stopPropagation(e); 
@@ -592,189 +551,21 @@
                             else if (interMode === 'EDIT' && !p.points_json) updateExisting(p.id, p.x, p.y, p.type, parts[2] || '', parts[3] || ''); 
                         } 
                     }); 
-                    layer.addTo(map); 
-                    renderedMarkers[id] = layer; 
+                    layer.addTo(map); renderedMarkers[id] = layer; 
                 }
             });
         } catch (e) {}
     }
 
-    map.on('mousemove', e => { 
-        if (drawingPolyline) {
-            let start;
-            if (currentType === 'mesure' && pointsBuffer.length > 0) {
-                start = pointsBuffer[0];
-                drawingPolyline.setLatLngs([start, e.latlng]);
-                
-                const distPx = Math.sqrt(Math.pow(e.latlng.lng - start[1], 2) + Math.pow(e.latlng.lat - start[0], 2));
-                const distMeters = (distPx / ECHELLE_PXM).toFixed(0);
-                
-                let dx = e.latlng.lng - start[1];
-                let dy = e.latlng.lat - start[0];
-                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                let azimut = (90 - angle + 360) % 360; 
-                
-                document.getElementById('dist-input').value = distMeters;
-                document.getElementById('hud-azimut').innerText = `${azimut.toFixed(2)}°`;
-                majArtillerie();
-            }
-            else if (currentType === 'route' && routePoints.length > 0) {
-                start = routePoints[routePoints.length - 1];
-                drawingPolyline.setLatLngs([start, e.latlng]);
-                
-                const distPx = Math.sqrt(Math.pow(e.latlng.lng - start[1], 2) + Math.pow(e.latlng.lat - start[0], 2));
-                const addedDist = (distPx / ECHELLE_PXM);
-                const tempTotalDist = currentRouteDist + addedDist;
-                
-                document.getElementById('route-dist').innerText = `${tempTotalDist.toFixed(0)}m`;
-                
-                const speedKmh = parseFloat(document.getElementById('transport-select').value);
-                const speedMs = speedKmh / 3.6;
-                const timeSec = tempTotalDist / speedMs;
-                let etaTxt = "";
-                if (timeSec < 60) {
-                    etaTxt = `${Math.round(timeSec)}s`;
-                } else {
-                    const mins = Math.floor(timeSec / 60);
-                    const secs = Math.round(timeSec % 60);
-                    etaTxt = `${mins}m ${secs}s`;
-                }
-                document.getElementById('route-eta').innerText = etaTxt;
-            }
-            else if (pendingIconPos) {
-                start = pendingIconPos;
-                drawingPolyline.setLatLngs([start, e.latlng]);
-            }
-            else if (pointsBuffer.length > 0) {
-                start = pointsBuffer[pointsBuffer.length - 1];
-                drawingPolyline.setLatLngs([start, e.latlng]);
-            }
-        }
-    });
-
-    map.on('click', e => {
-        if (interMode !== 'ADD') return;
-        const pos = [e.latlng.lat, e.latlng.lng];
-
-        if (currentType === 'route') {
-            routePoints.push(pos);
-            
-            if (routePoints.length === 1) {
-                document.getElementById('route-hud').style.display = 'block';
-                currentRouteDist = 0;
-                majRoute();
-                updateStatus("TRACÉ EN COURS... CLIQUEZ POUR AJOUTER DES POINTS");
-                routePolyline = L.polyline([pos], {color: currentColor, weight: 3, dashArray: '5, 5'}).addTo(map);
-                drawingPolyline = L.polyline([pos, pos], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map);
-            } else {
-                const prev = routePoints[routePoints.length - 2];
-                const distPx = Math.sqrt(Math.pow(pos[1]-prev[1], 2) + Math.pow(pos[0]-prev[0], 2));
-                currentRouteDist += (distPx / ECHELLE_PXM);
-                
-                routePolyline.setLatLngs(routePoints);
-                majRoute();
-            }
-            return;
-        }
-
-        if (currentType === 'mesure') {
-            pointsBuffer.push(pos);
-            if (pointsBuffer.length === 1) {
-                if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
-                
-                updateStatus("CLIQUEZ SUR LA CIBLE...");
-                document.getElementById('artillery-hud').style.display = 'block';
-                document.getElementById('dist-input').value = "";
-                document.getElementById('hud-azimut').innerText = "--";
-                document.getElementById('hud-elev-haut').innerText = "--";
-                document.getElementById('hud-temps-haut').innerText = "--";
-                document.getElementById('hud-elev-bas').innerText = "--";
-                document.getElementById('hud-temps-bas').innerText = "--";
-                
-                drawingPolyline = L.polyline([pos, pos], {color: '#000000', dashArray: '5, 10'}).addTo(map);
-            } else {
-                artillerieCible.p1 = pointsBuffer[0]; 
-                artillerieCible.p2 = pointsBuffer[1]; 
-                
-                const p1 = artillerieCible.p1;
-                const p2 = artillerieCible.p2;
-                const distPixels = Math.sqrt(Math.pow(p2[1]-p1[1], 2) + Math.pow(p2[0]-p1[0], 2));
-                const distMeters = (distPixels / ECHELLE_PXM).toFixed(0);
-                
-                let dx = p2[1] - p1[1];
-                let dy = p2[0] - p1[0];
-                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                let azimut = (90 - angle + 360) % 360; 
-                
-                document.getElementById('dist-input').value = distMeters;
-                document.getElementById('hud-azimut').innerText = `${azimut.toFixed(2)}°`;
-                
-                majArtillerie(); 
-
-                const elevTxt = document.getElementById('hud-elev-haut').innerText;
-                const volTxt = document.getElementById('hud-temps-haut').innerText;
-                const tooltipText = `DIST: ${distMeters}m — AZ: ${azimut.toFixed(2)}°<br>ÉLÉV: <span style="color:var(--primary)">${elevTxt}</span> — VOL: ${volTxt}`;
-                
-                save({ 
-                    x: artillerieCible.p1[0], y: artillerieCible.p1[1],
-                    type: 'mesure_line', 
-                    points_json: JSON.stringify([artillerieCible.p1, artillerieCible.p2]), 
-                    label: `#000000|40|${tooltipText}` 
-                });
-                
-                pointsBuffer = [];
-                if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
-            }
-            return;
-        }
-
-        if (iconFiles[currentType] && currentType !== 'Dot') {
-            if (!pendingIconPos) { pendingIconPos = pos; updateStatus("ORIENTEZ L'UNITÉ (CLIC 2)..."); drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map); }
-            else {
-                const dx = e.latlng.lng - pendingIconPos[1];
-                const dy = e.latlng.lat - pendingIconPos[0];
-                let angle = Math.atan2(dx, dy) * (180 / Math.PI);
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                const finalRot = dist < 5 ? "" : Math.round(angle);
-                save({ x: pendingIconPos[0], y: pendingIconPos[1], type: currentType, label: `${currentColor}|${currentSize}||${finalRot}` });
-                pendingIconPos = null;
-                if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
-            }
-            return;
-        }
-
-        if (currentType === 'text') {
-            const txt = prompt("Texte :");
-            if(txt) save({ x: pos[0], y: pos[1], type: 'text', label: `${currentColor}|${currentSize}|${txt}` });
-        } else if (['arrow', 'zone', 'zone4', 'circle'].includes(currentType)) {
-            pointsBuffer.push(pos);
-            let limit = (currentType === 'zone') ? 3 : (currentType === 'zone4' ? 4 : 2);
-            if (pointsBuffer.length === limit) { save({ type: currentType, points_json: JSON.stringify(pointsBuffer), label: `${currentColor}|${currentSize}` }); pointsBuffer = []; if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; } }
-            else { if (!drawingPolyline) drawingPolyline = L.polyline([pos, e.latlng], {color: currentColor, weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(map); }
-        } else { save({ x: pos[0], y: pos[1], type: currentType, label: `${currentColor}|${currentSize}` }); }
-    });
-
     function updateStatus(t) { document.getElementById('status').innerText = t; }
     async function save(obj) { isSaving = true; await fetch('/pings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj) }); isSaving = false; load(); }
     async function del(id) { await fetch(`/pings?id=${id}`, { method: 'DELETE' }); load(); }
-    async function clearAll() { if(confirm("WIPE?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
-    
+    async function clearAll() { if(confirm("WIPE TERMINAL?")) { await fetch('/pings?id=all', { method: 'DELETE' }); load(); } }
     async function updateExisting(id, x, y, type, oldText, oldRot) {
-        updateStatus("ÉDITION...");
-        let newLabel = `${currentColor}|${currentSize}`;
-        if (type === 'text') {
-            const newTxt = prompt("Modifier le texte :", oldText);
-            if (newTxt === null) return;
-            newLabel += `|${newTxt}`;
-        } else {
-            newLabel += `||${oldRot}`;
-        }
-        await fetch(`/pings?id=${id}`, { method: 'DELETE' });
-        save({ x: x, y: y, type: type, label: newLabel });
+        updateStatus("ÉDITION..."); let newLabel = `${currentColor}|${currentSize}`;
+        if (type === 'text') { const newTxt = prompt("Modifier le texte :", oldText); if (newTxt === null) return; newLabel += `|${newTxt}`; } else { newLabel += `||${oldRot}`; }
+        await fetch(`/pings?id=${id}`, { method: 'DELETE' }); save({ x: x, y: y, type: type, label: newLabel });
     }
-
-    setInterval(load, 1000);
-    load();
 </script>
 </body>
 </html>
