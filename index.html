@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>ALTIS COMMAND TERMINAL | MULTI-SYSTEMS</title>
+    <title>ALTIS COMMAND TERMINAL | HD EDITION</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://jetelain.github.io/Arma3Map/css/mapUtils.css" />
@@ -266,9 +266,7 @@
         "podnos": {
             friction: -0.00060, // VALEUR À VÉRIFIER EN JEU
             charges: [
-                { nom: "CHARGE 0", vit: 60 },  // VALEUR À VÉRIFIER EN JEU
-                { nom: "CHARGE 1", vit: 120, defaut: true }, // VALEUR À VÉRIFIER EN JEU
-                { nom: "CHARGE 2", vit: 200 }  // VALEUR À VÉRIFIER EN JEU
+                { nom: "CHARGE UNIQUE", vit: 200, defaut: true } // VALEUR À VÉRIFIER EN JEU
             ]
         }
     };
@@ -280,7 +278,7 @@
         document.getElementById('air-friction').value = data.friction;
         
         const selectCharge = document.getElementById('charge-select');
-        selectCharge.innerHTML = ""; // Vider l'ancien menu
+        selectCharge.innerHTML = ""; 
         
         data.charges.forEach(c => {
             let option = document.createElement("option");
@@ -290,7 +288,7 @@
             selectCharge.add(option);
         });
         
-        updateV0(); // Mets à jour la vitesse et recalcule
+        updateV0();
     }
 
     // === INITIALISATION SÉCURISÉE AVEC JQUERY ===
@@ -321,7 +319,6 @@
         L.latlngGraticule().addTo(map);
         L.control.gridMousePosition().addTo(map);
         
-        // Initialiser le menu des armes au démarrage
         changerArme();
 
         // === GESTION DES CLICS ET DESSINS ===
