@@ -215,23 +215,37 @@
 <script src="https://jetelain.github.io/Arma3Map/maps/altis.js"></script>
 
 <script>
-    // INITIALISATION DE LA CARTE AVEC LES VRAIES DONNÉES D'ALTIS
+    // INITIALISATION ULTRA-ROBUSTE POUR ÉVITER TOUT ÉCRAN GRIS
+    const mapSize = 30720;
+    const bounds = [[0, 0], [mapSize, mapSize]];
+
+    // On utilise la configuration de Jetelain si elle a réussi à charger, sinon on sécurise le coup.
+    const crs_to_use = (typeof mapInfos !== 'undefined' && mapInfos.CRS) ? mapInfos.CRS : L.CRS.Simple;
+
     const map = L.map('map', {
-        crs: mapInfos.CRS,
-        minZoom: mapInfos.minZoom,
-        maxZoom: mapInfos.maxZoom,
+        crs: crs_to_use,
+        minZoom: 0,
+        maxZoom: 6,
         zoomControl: false
     });
 
-    // Chargement dynamique des tuiles HD
-    L.tileLayer('https://jetelain.github.io/Arma3Map' + mapInfos.tilePattern, {
-        attribution: mapInfos.attribution,
-        tileSize: mapInfos.tileSize,
-        noWrap: true
+    // Construction de l'URL vers les images de la carte
+    let tileUrl = 'https://jetelain.github.io/Arma3Map/altis/{z}/{x}/{y}.png';
+    if (typeof mapInfos !== 'undefined' && mapInfos.tilePattern) {
+        tileUrl = 'https://jetelain.github.io/Arma3Map' + mapInfos.tilePattern;
+    }
+
+    // Chargement dynamique des tuiles HD de la carte
+    L.tileLayer(tileUrl, {
+        minZoom: 0,
+        maxZoom: 6,
+        noWrap: true,
+        bounds: bounds,
+        tileSize: 256
     }).addTo(map);
 
-    // Centrer la carte selon les réglages d'origine
-    map.setView(mapInfos.center, mapInfos.defaultZoom);
+    // On force la carte à se centrer parfaitement
+    map.fitBounds(bounds);
 
     // ÉCHELLE PARFAITE: 1 unité sur cette carte = 1 mètre dans Arma 3
     const ECHELLE_PXM = 1.0; 
