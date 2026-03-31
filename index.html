@@ -215,37 +215,27 @@
 <script src="https://jetelain.github.io/Arma3Map/maps/altis.js"></script>
 
 <script>
-    // INITIALISATION ULTRA-ROBUSTE POUR ÉVITER TOUT ÉCRAN GRIS
-    const mapSize = 30720;
-    const bounds = [[0, 0], [mapSize, mapSize]];
-
-    // On utilise la configuration de Jetelain si elle a réussi à charger, sinon on sécurise le coup.
-    const crs_to_use = (typeof mapInfos !== 'undefined' && mapInfos.CRS) ? mapInfos.CRS : L.CRS.Simple;
-
-    const map = L.map('map', {
-        crs: crs_to_use,
-        minZoom: 0,
-        maxZoom: 6,
+    // INITIALISATION EXACTE DE LA CARTE ARMA3MAP
+    var map = L.map("map", {
+        crs: mapInfos.CRS,
+        minZoom: mapInfos.minZoom,
+        maxZoom: mapInfos.maxZoom,
         zoomControl: false
     });
 
-    // Construction de l'URL vers les images de la carte
-    let tileUrl = 'https://jetelain.github.io/Arma3Map/altis/{z}/{x}/{y}.png';
-    if (typeof mapInfos !== 'undefined' && mapInfos.tilePattern) {
-        tileUrl = 'https://jetelain.github.io/Arma3Map' + mapInfos.tilePattern;
-    }
+    // Chargement de la grille d'images de Jetelain (Le "puzzle")
+    L.tileLayer(
+        "https://jetelain.github.io/Arma3Map" + mapInfos.tilePattern,
+        {
+            attribution: mapInfos.attribution,
+            tileSize: mapInfos.tileSize,
+            noWrap: true
+        }
+    ).addTo(map);
 
-    // Chargement dynamique des tuiles HD de la carte
-    L.tileLayer(tileUrl, {
-        minZoom: 0,
-        maxZoom: 6,
-        noWrap: true,
-        bounds: bounds,
-        tileSize: 256
-    }).addTo(map);
-
-    // On force la carte à se centrer parfaitement
-    map.fitBounds(bounds);
+    // On utilise la méthode officielle pour centrer la caméra sans planter !
+    var defaultCenter = mapInfos.center || [15360, 15360];
+    map.setView(defaultCenter, 2);
 
     // ÉCHELLE PARFAITE: 1 unité sur cette carte = 1 mètre dans Arma 3
     const ECHELLE_PXM = 1.0; 
@@ -456,8 +446,13 @@
 
     function toggleMute() { isMuted = !isMuted; const btn = document.getElementById('mute-btn'); btn.innerHTML = isMuted ? "🔇" : "🔊"; btn.classList.toggle('active', isMuted); }
     function playTacticalPing() { if (isMuted) return; try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const vol = document.getElementById('volSlider').value; const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(880, ctx.currentTime); gain.gain.setValueAtTime(vol * 0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1); osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.1); } catch(e){} }
-    function jumpTo(pos) { map.flyTo(pos, 4, { animate: true, duration: 1.2 }); updateStatus(`DÉPLOIEMENT : ZONE ${pos}`); }
-    map.on('contextmenu', (e) => { alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]"); });
+    
+    function jumpTo(pos) { 
+        map.flyTo(pos, 4, { animate: true, duration: 1.2 }); 
+        updateStatus(`DÉPLOIEMENT EN COURS...`); 
+    }
+    
+    map.on('contextmenu', (e) => { alert("Coordonnées (X,Y) : [" + Math.round(e.latlng.lng) + ", " + Math.round(e.latlng.lat) + "]"); });
 
     function setInterMode(m) { fermerHud(); fermerRouteHud(); interMode = m; ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active'); load(); }
     function setType(t, b) { 
@@ -544,7 +539,7 @@
                                 const dM = (distPx / ECHELLE_PXM).toFixed(0);
                                 let dx = pts[1][1] - pts[0][1];
                                 let dy = pts[1][0] - pts[0][0];
-                                let az = (90 - (Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360;
+                                let az = (90 - (Math.atan2(dx, dy) * 180 / Math.PI) + 360) % 360;
                                 
                                 document.getElementById('artillery-hud').style.display = 'block';
                                 document.getElementById('dist-input').value = dM;
@@ -589,7 +584,7 @@
                 
                 let dx = e.latlng.lng - start[1];
                 let dy = e.latlng.lat - start[0];
-                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                let angle = Math.atan2(dx, dy) * (180 / Math.PI);
                 let azimut = (90 - angle + 360) % 360; 
                 
                 document.getElementById('dist-input').value = distMeters;
@@ -681,7 +676,7 @@
                 
                 let dx = p2[1] - p1[1];
                 let dy = p2[0] - p1[0];
-                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                let angle = Math.atan2(dx, dy) * (180 / Math.PI);
                 let azimut = (90 - angle + 360) % 360; 
                 
                 document.getElementById('dist-input').value = distMeters;
