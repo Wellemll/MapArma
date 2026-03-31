@@ -220,7 +220,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/jquery@3.5.1/dist/jquery.min.js"></script>
 <script src="https://jetelain.github.io/Arma3Map/js/mapUtils.js"></script>
-<script src="https://jetelain.github.io/Arma3Map/maps/altis.js"></script>
+<script src="https://jetelain.github.io/Arma3Map/maps/altis.js"></script> 
 
 <script>
     // Variables globales
@@ -235,7 +235,6 @@
     let routePolyline = null;
     let currentRouteDist = 0;
 
-    // LE DICTIONNAIRE DES ICÔNES (L'élément manquant essentiel !)
     const iconFiles = {
         'Infantry': { blue: 'Icons/Infantry.png', red: 'Icons/Infantry2.png' },
         'Vehicule': { blue: 'Icons/Vehicule.png', red: 'Icons/Vehicule2.png' },
@@ -252,10 +251,8 @@
     // === INITIALISATION SÉCURISÉE AVEC JQUERY ===
     $(function () {
         var mapInfos = Arma3Map.Maps.altis; 
+        var overZoomLevel = mapInfos.maxZoom + 2; 
 
-        var overZoomLevel = mapInfos.maxZoom + 2; // Zoom virtuel amélioré
-
-        // Création de la carte
         map = L.map("map", {
           minZoom: mapInfos.minZoom,
           maxZoom: overZoomLevel,
@@ -263,7 +260,6 @@
           zoomControl: false
         });
 
-        // Chargement des tuiles
         L.tileLayer(
           "https://jetelain.github.io/Arma3Map" + mapInfos.tilePattern,
           {
@@ -410,6 +406,65 @@
 
         setInterval(load, 1000);
         load();
+    });
+
+    // ==========================================
+    // LOGIQUE DE SÉCURITÉ ET RACCOURCIS CLAVIER
+    // ==========================================
+    
+    function annulerTrace() {
+        pointsBuffer = [];
+        routePoints = [];
+        pendingIconPos = null;
+        currentRouteDist = 0;
+        if (drawingPolyline) { map.removeLayer(drawingPolyline); drawingPolyline = null; }
+        if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
+        document.getElementById('artillery-hud').style.display = 'none';
+        document.getElementById('route-hud').style.display = 'none';
+        updateStatus(`OUTIL : ${currentType.toUpperCase()}`);
+    }
+
+    document.addEventListener('keydown', function(e) {
+        // Ignorer si on est dans un champ texte (comme la distance manuelle)
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+        // ESCAPE : Annuler tout tracé en cours
+        if (e.key === 'Escape') {
+            if (pointsBuffer.length > 0 || routePoints.length > 0 || pendingIconPos) {
+                annulerTrace();
+            }
+        }
+        
+        // TOUCHE Z : Annuler le dernier point (Undo)
+        if (e.key.toLowerCase() === 'z') {
+            if (currentType === 'route' && routePoints.length > 0) {
+                routePoints.pop(); // Enlever le dernier point
+                if (routePoints.length === 0) {
+                    annulerTrace();
+                } else {
+                    // Recalculer toute la route avec un point de moins
+                    currentRouteDist = 0;
+                    for(let i=1; i<routePoints.length; i++) {
+                        const prev = routePoints[i-1];
+                        const pos = routePoints[i];
+                        const dp = Math.sqrt(Math.pow(pos[1]-prev[1], 2) + Math.pow(pos[0]-prev[0], 2));
+                        currentRouteDist += (dp / ECHELLE_PXM);
+                    }
+                    routePolyline.setLatLngs(routePoints);
+                    if (drawingPolyline) drawingPolyline.setLatLngs([routePoints[routePoints.length - 1], routePoints[routePoints.length - 1]]);
+                    majRoute();
+                }
+            } else if (pointsBuffer.length > 0) {
+                pointsBuffer.pop();
+                if (pointsBuffer.length === 0) {
+                    annulerTrace();
+                } else {
+                    if (drawingPolyline) drawingPolyline.setLatLngs([pointsBuffer[pointsBuffer.length - 1], pointsBuffer[pointsBuffer.length - 1]]);
+                }
+            } else if (pendingIconPos) {
+                annulerTrace();
+            }
+        }
     });
 
     // ==========================================
