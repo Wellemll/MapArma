@@ -212,29 +212,28 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://jetelain.github.io/Arma3Map/maps/altis.js"></script>
+
 <script>
-    // INITIALISATION DE LA CARTE HAUTE RÉSOLUTION (Arma3Map)
+    // INITIALISATION DE LA CARTE AVEC LES VRAIES DONNÉES D'ALTIS
     const map = L.map('map', {
-        crs: L.CRS.Simple,
-        minZoom: 0,
-        maxZoom: 6,
+        crs: mapInfos.CRS,
+        minZoom: mapInfos.minZoom,
+        maxZoom: mapInfos.maxZoom,
         zoomControl: false
     });
 
-    const mapSize = 30720;
-    const bounds = [[0, 0], [mapSize, mapSize]];
-
-    L.tileLayer('https://jetelain.github.io/Arma3Map/Tiles/altis/topo/{z}/{x}/{y}.png', {
-        minZoom: 0,
-        maxZoom: 6,
-        noWrap: true,
-        bounds: bounds,
-        tms: false
+    // Chargement dynamique des tuiles HD
+    L.tileLayer('https://jetelain.github.io/Arma3Map' + mapInfos.tilePattern, {
+        attribution: mapInfos.attribution,
+        tileSize: mapInfos.tileSize,
+        noWrap: true
     }).addTo(map);
 
-    map.fitBounds(bounds);
+    // Centrer la carte selon les réglages d'origine
+    map.setView(mapInfos.center, mapInfos.defaultZoom);
 
-    // CORRECTION DE L'ÉCHELLE POUR LA NOUVELLE CARTE
+    // ÉCHELLE PARFAITE: 1 unité sur cette carte = 1 mètre dans Arma 3
     const ECHELLE_PXM = 1.0; 
     
     let artillerieCible = { p1: null, p2: null }; 
@@ -443,7 +442,7 @@
 
     function toggleMute() { isMuted = !isMuted; const btn = document.getElementById('mute-btn'); btn.innerHTML = isMuted ? "🔇" : "🔊"; btn.classList.toggle('active', isMuted); }
     function playTacticalPing() { if (isMuted) return; try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const vol = document.getElementById('volSlider').value; const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(880, ctx.currentTime); gain.gain.setValueAtTime(vol * 0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1); osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.1); } catch(e){} }
-    function jumpTo(pos) { map.flyTo(pos, 1, { animate: true, duration: 1.2 }); updateStatus(`DÉPLOIEMENT : ZONE ${pos}`); }
+    function jumpTo(pos) { map.flyTo(pos, 4, { animate: true, duration: 1.2 }); updateStatus(`DÉPLOIEMENT : ZONE ${pos}`); }
     map.on('contextmenu', (e) => { alert("Coordonnées précises : [" + e.latlng.lat.toFixed(0) + ", " + e.latlng.lng.toFixed(0) + "]"); });
 
     function setInterMode(m) { fermerHud(); fermerRouteHud(); interMode = m; ['btn-add', 'btn-edit', 'btn-del'].forEach(id => document.getElementById(id).classList.remove('active')); document.getElementById(`btn-${m.toLowerCase()}`).classList.add('active'); load(); }
