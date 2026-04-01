@@ -160,7 +160,7 @@
             <div class="alt-container" style="background: rgba(255, 157, 0, 0.1); padding: 5px; border-radius: 4px; border: 1px dashed var(--orange); margin-bottom: 5px;">
                 <div class="alt-box">
                     <label style="color:var(--blue);">VITESSE (m/s)</label>
-                    <input type="number" id="v0-input" class="alt-input" step="0.01" oninput="majArtillerie()">
+                    <input type="number" id="v0-input" class="alt-input" step="0.001" oninput="majArtillerie()">
                 </div>
                 <div class="alt-box">
                     <label style="color:var(--red);">COEFF. AIR</label>
@@ -266,11 +266,12 @@
             ]
         },
         "podnos": {
-            friction: -0.00060, 
-            elevMin: 40,  // Étalonnage basé sur les données du joueur
+            // Ajustement précis de la friction pour correspondre à 559m @ 45°
+            friction: -0.00049, 
+            elevMin: 40,  
             elevMax: 85,
             charges: [
-                { nom: "CHARGE UNIQUE", vit: 84.4, defaut: true } // V0 calibrée pour atterrir à 547m @ 40°
+                { nom: "CHARGE UNIQUE", vit: 85.485, defaut: true } 
             ]
         }
     };
@@ -547,14 +548,12 @@
             return null; 
         }
 
-        // Trouver l'angle de portée maximale absolue (décalé par la friction)
         let maxDist = 0; let angleMaxDist = 45;
         for (let a = 35; a <= 55; a++) {
             let sim = simulerVol(a);
             if (sim && sim.distance > maxDist) { maxDist = sim.distance; angleMaxDist = a; }
         }
 
-        // Recherche Trajectoire Haute (Cloche)
         let minHaut = angleMaxDist; let maxHaut = 89.9; let angleHaut = null; let tempsHaut = null;
         for (let i = 0; i < 30; i++) { 
             let test = (minHaut + maxHaut) / 2; let sim = simulerVol(test); 
@@ -563,7 +562,6 @@
             angleHaut = test; tempsHaut = sim.temps; 
         }
         
-        // Recherche Trajectoire Basse (Tendue)
         let minBas = 0.1; let maxBas = angleMaxDist; let angleBas = null; let tempsBas = null;
         for (let i = 0; i < 30; i++) { 
             let test = (minBas + maxBas) / 2; let sim = simulerVol(test); 
@@ -572,7 +570,6 @@
             angleBas = test; tempsBas = sim.temps; 
         }
 
-        // Vérification des Limites du Tube d'Artillerie
         let resHaut = "HORS PORTÉE"; let resBas = "HORS PORTÉE";
         let tH = "--"; let tB = "--";
 
