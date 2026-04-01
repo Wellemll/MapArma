@@ -266,12 +266,11 @@
             ]
         },
         "podnos": {
-            // Ajustement précis de la friction pour correspondre à 559m @ 45°
-            friction: -0.00049, 
+            friction: -0.00060, // Restauration du coeff d'air standard de RHS
             elevMin: 40,  
             elevMax: 85,
             charges: [
-                { nom: "CHARGE UNIQUE", vit: 85.485, defaut: true } 
+                { nom: "CHARGE UNIQUE", vit: 85.485, defaut: true } // Vitesse exacte
             ]
         }
     };
