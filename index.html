@@ -250,11 +250,13 @@
     };
 
     // ==========================================
-    // BASE DE DONNÉES ARMEMENT RHS
+    // BASE DE DONNÉES ARMEMENT RHS (AVANCÉE)
     // ==========================================
     const armesRHS = {
         "m252": {
             friction: -0.00057,
+            elevMin: 45,
+            elevMax: 85,
             charges: [
                 { nom: "CHARGE 0", vit: 42 },
                 { nom: "CHARGE 1", vit: 94 },
@@ -264,9 +266,11 @@
             ]
         },
         "podnos": {
-            friction: -0.00060, // VALEUR À VÉRIFIER EN JEU
+            friction: -0.00060, 
+            elevMin: 40,  // Étalonnage basé sur les données du joueur
+            elevMax: 85,
             charges: [
-                { nom: "CHARGE UNIQUE", vit: 200, defaut: true } // VALEUR À VÉRIFIER EN JEU
+                { nom: "CHARGE UNIQUE", vit: 84.4, defaut: true } // V0 calibrée pour atterrir à 547m @ 40°
             ]
         }
     };
@@ -516,7 +520,7 @@
     });
 
     // ==========================================
-    // LOGIQUE EXTERNE (Balistique, Menus, APIs)
+    // MOTEUR BALISTIQUE AVANCÉ MULTI-ARMES
     // ==========================================
     
     function updateV0() { document.getElementById('v0-input').value = document.getElementById('charge-select').value; majArtillerie(); }
@@ -525,6 +529,11 @@
     function calculerTirRHS(distCible, v0, altShooter, altTarget) {
         distCible = parseFloat(distCible); altShooter = parseFloat(altShooter) || 0; altTarget = parseFloat(altTarget) || 0;
         let airFriction = parseFloat(document.getElementById('air-friction').value) || 0;
+        
+        const armeId = document.getElementById('weapon-select').value;
+        const eMin = armesRHS[armeId].elevMin || 0;
+        const eMax = armesRHS[armeId].elevMax || 89.9;
+
         if (distCible === 0 || isNaN(distCible)) return null;
 
         function simulerVol(angleDeg) {
@@ -538,18 +547,52 @@
             return null; 
         }
 
-        let minHaut = 45; let maxHaut = 89.9; let angleHaut = null; let tempsHaut = null;
-        for (let i = 0; i < 30; i++) { let test = (minHaut + maxHaut) / 2; let sim = simulerVol(test); if (!sim) { maxHaut = test; continue; } if (sim.distance > distCible) minHaut = test; else maxHaut = test; angleHaut = test; tempsHaut = sim.temps; }
-        
-        let minBas = 0.1; let maxBas = 45; let angleBas = null; let tempsBas = null;
-        for (let i = 0; i < 30; i++) { let test = (minBas + maxBas) / 2; let sim = simulerVol(test); if (!sim) { minBas = test; continue; } if (sim.distance > distCible) maxBas = test; else minBas = test; angleBas = test; tempsBas = sim.temps; }
+        // Trouver l'angle de portée maximale absolue (décalé par la friction)
+        let maxDist = 0; let angleMaxDist = 45;
+        for (let a = 35; a <= 55; a++) {
+            let sim = simulerVol(a);
+            if (sim && sim.distance > maxDist) { maxDist = sim.distance; angleMaxDist = a; }
+        }
 
-        return {
-            haut: (simulerVol(angleHaut) && Math.abs(simulerVol(angleHaut).distance - distCible) < 5) ? `${angleHaut.toFixed(2)}°` : "HORS PORTÉE",
-            tempsHaut: angleHaut ? `${tempsHaut.toFixed(1)}s` : "--",
-            bas: (simulerVol(angleBas) && Math.abs(simulerVol(angleBas).distance - distCible) < 5) ? `${angleBas.toFixed(2)}°` : "HORS PORTÉE",
-            tempsBas: angleBas ? `${tempsBas.toFixed(1)}s` : "--"
-        };
+        // Recherche Trajectoire Haute (Cloche)
+        let minHaut = angleMaxDist; let maxHaut = 89.9; let angleHaut = null; let tempsHaut = null;
+        for (let i = 0; i < 30; i++) { 
+            let test = (minHaut + maxHaut) / 2; let sim = simulerVol(test); 
+            if (!sim) { maxHaut = test; continue; } 
+            if (sim.distance > distCible) minHaut = test; else maxHaut = test; 
+            angleHaut = test; tempsHaut = sim.temps; 
+        }
+        
+        // Recherche Trajectoire Basse (Tendue)
+        let minBas = 0.1; let maxBas = angleMaxDist; let angleBas = null; let tempsBas = null;
+        for (let i = 0; i < 30; i++) { 
+            let test = (minBas + maxBas) / 2; let sim = simulerVol(test); 
+            if (!sim) { minBas = test; continue; } 
+            if (sim.distance < distCible) minBas = test; else maxBas = test; 
+            angleBas = test; tempsBas = sim.temps; 
+        }
+
+        // Vérification des Limites du Tube d'Artillerie
+        let resHaut = "HORS PORTÉE"; let resBas = "HORS PORTÉE";
+        let tH = "--"; let tB = "--";
+
+        if (angleHaut) {
+            let verif = simulerVol(angleHaut);
+            if (verif && Math.abs(verif.distance - distCible) < 5) {
+                if (angleHaut >= eMin && angleHaut <= eMax) { resHaut = `${angleHaut.toFixed(2)}°`; tH = `${tempsHaut.toFixed(1)}s`; } 
+                else { resHaut = "HORS LIMITES (TUBE)"; }
+            }
+        }
+
+        if (angleBas) {
+            let verif = simulerVol(angleBas);
+            if (verif && Math.abs(verif.distance - distCible) < 5) {
+                if (angleBas >= eMin && angleBas <= eMax) { resBas = `${angleBas.toFixed(2)}°`; tB = `${tempsBas.toFixed(1)}s`; } 
+                else { resBas = "HORS LIMITES (TUBE)"; }
+            }
+        }
+
+        return { haut: resHaut, tempsHaut: tH, bas: resBas, tempsBas: tB };
     }
 
     function majArtillerie() {
@@ -570,7 +613,12 @@
         document.getElementById('hud-temps-haut').innerText = tir ? tir.tempsHaut : "--";
         document.getElementById('hud-elev-bas').innerText = tir ? tir.bas : "HORS PORTÉE";
         document.getElementById('hud-temps-bas').innerText = tir ? tir.tempsBas : "--";
-        updateStatus(tir ? "CALCUL TERMINÉ" : "CIBLE HORS PORTÉE");
+        
+        if (tir && (tir.haut.includes("LIMITES") && tir.bas.includes("LIMITES"))) {
+             updateStatus("CIBLE HORS LIMITES (TUBE)");
+        } else {
+             updateStatus(tir ? "CALCUL TERMINÉ" : "CIBLE HORS PORTÉE");
+        }
     }
 
     function majRoute() {
